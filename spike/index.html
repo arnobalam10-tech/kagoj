@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Kagoj spike">
+<title>Kagoj — Phase 0 spike</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #ECEAE4; font-family: -apple-system, Helvetica, Arial, sans-serif; }
+  body { position: fixed; top: 0; left: 0; right: 0; bottom: 0; -webkit-user-select: none; }
+  .bar { height: 56px; display: -webkit-box; display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; padding: 0 8px; background: #F7F6F2; border-bottom: 1px solid #DAD7CF; }
+  button { font-size: 16px; height: 44px; padding: 0 14px; margin-right: 8px; border: 1px solid #DAD7CF; border-radius: 8px; background: #fff; }
+  #fps { margin-left: auto; font: 14px Menlo, monospace; }
+  canvas { display: block; touch-action: none; }
+  #out { position: absolute; left: 8px; bottom: 8px; width: 60%; max-height: 40%; overflow: auto; margin: 0; padding: 8px; font: 11px/1.4 Menlo, monospace; white-space: pre-wrap; background: rgba(0,0,0,0.75); color: #CFE8CF; border-radius: 8px; pointer-events: none; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <button id="clear">Clear</button>
+  <button id="net">Test HTTPS / XHR</button>
+  <button id="store">Test storage</button>
+  <span id="fps">– fps</span>
+</div>
+<canvas id="c"></canvas>
+<pre id="out"></pre>
+<script src="spike.js"></script>
+</body>
+</html>
