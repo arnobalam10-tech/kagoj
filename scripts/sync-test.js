@@ -190,10 +190,10 @@ async function test(name, fn) {
     var err = await new Promise(function (r) { A.sb.login('arnob', 'nope', r); });
     assert.strictEqual(A.sb.describeError(err), 'Wrong email or password');
   });
-  await test('username login maps to name@kagoj.app', async function () {
+  await test('username login maps to name@ami.com', async function () {
     await cb2p(function (cb) { A.sb.login('Arnob', 'secret1', cb); });
-    assert.strictEqual(A.sb.email(), 'arnob@kagoj.app');
-    await cb2p(function (cb) { B.sb.login('arnob@kagoj.app', 'secret1', cb); });
+    assert.strictEqual(A.sb.email(), 'arnob@ami.com');
+    await cb2p(function (cb) { B.sb.login('arnob@ami.com', 'secret1', cb); });
   });
   await test('status is "Saved" with nothing pending', function () {
     assert.strictEqual(A.Sync.status().code, 'saved');

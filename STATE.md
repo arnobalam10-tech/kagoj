@@ -40,7 +40,7 @@ _Last updated: 2026-10-03_
 
 ## Decisions log
 - Supabase project: reuse "arnobalam10-tech's Project" (owner's choice). It also holds an unrelated, empty exam-app schema with 3 old auth users; RLS keeps Kagoj rows private per user.
-- Login accepts a plain username: `arnob` → `arnob@kagoj.app` (`config.usernameDomain`).
+- Login accepts a plain username: `arnob` → `arnob@ami.com` (`config.usernameDomain`).
 - Writing: right-handed, both orientations, mostly portrait → default zoom "Auto" (fit page in portrait, fit width in landscape), changeable in Settings.
 - iPhone: mostly reading → opens in View mode, with a pencil toggle; default `*.vercel.app` domain.
 - Schema addition: `pages.label` keeps the "conflict copy (iPad, 3 Oct 14:20)" name across devices.
@@ -51,7 +51,7 @@ _Last updated: 2026-10-03_
 
 ## Owner actions pending
 1. **Supabase → Authentication → Sign In / Providers → turn OFF "Allow new users to sign up"** (currently ON: anyone could create an account via the API; they would only see their own empty data, but it should be off).
-2. **Create your user:** Authentication → Users → Add user → Create new user: email `arnob@kagoj.app`, a password of **at least 6 characters** (Supabase rejects `1234`), tick "Auto Confirm User". Log in with `arnob` + that password.
+2. ~~Create your user~~ done: `arnob@ami.com` (confirmed).
 3. Optional: Authentication → Sessions → raise the refresh-token / inactivity limits so the iPad stays logged in for months.
 4. Phase 0 on the real iPad: open `/spike/` in Safari and from the home screen, run both tests; install the ISRG Root X1 profile if Safari reports a certificate error (PRD §5).
 
