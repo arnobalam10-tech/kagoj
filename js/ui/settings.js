@@ -107,8 +107,12 @@
       if (u) { rows.push(row('Used', D.el('span.set-value', { text: Math.round(u.fraction * 100) + '%' }))); }
     }
     var nbs = Repo.notebooks().length;
-    var pages = U.values(Repo.pages).filter(function (p) { return !p.deleted_at; }).length;
-    var local = U.values(Repo.pages).filter(function (p) { return !p.deleted_at && !p.needsDrawing; }).length;
+    var live = U.values(Repo.pages).filter(function (p) {
+      var nb = Repo.notebook(p.notebook_id);
+      return !p.deleted_at && nb && !nb.deleted_at;
+    });
+    var pages = live.length;
+    var local = live.filter(function (p) { return !p.needsDrawing; }).length;
     rows.push(row('Notebooks / pages', D.el('span.set-value', { text: nbs + ' / ' + pages + (local !== pages ? ' (' + local + ' downloaded)' : '') })));
     return section('Storage', rows);
   }

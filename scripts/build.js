@@ -20,6 +20,11 @@ try {
   cp.execSync('npx eslint js spike/spike.js --max-warnings 0', { cwd: ROOT, stdio: 'inherit' });
 } catch (e) { fail('lint errors'); }
 
+log('> tests');
+try {
+  cp.execSync('node scripts/test.js && node scripts/sync-test.js', { cwd: ROOT, stdio: 'pipe' });
+} catch (e) { process.stdout.write(String(e.stdout || '')); fail('tests failed'); }
+
 // 2. collect files from index.html build blocks
 var html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 function block(name) {

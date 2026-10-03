@@ -48,7 +48,8 @@
     router.root.appendChild(host);
     router.screenName = r.name;
     router.current = screen;
-    document.body.className = 'on-' + r.name;
+    var cls = document.body.className.replace(/(^|\s)on-[a-z]+/g, '').replace(/^\s+|\s+$/g, '');
+    document.body.className = (cls ? cls + ' ' : '') + 'on-' + r.name;
     try {
       screen.mount(host, r);
     } catch (e2) {

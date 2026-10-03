@@ -8,6 +8,7 @@
   function fitModeFor() {
     var m = K.prefs.get('fitMode');
     if (m === 'width' || m === 'page') { return m; }
+    if (U.isPhone()) { return 'width'; }
     return window.innerHeight > window.innerWidth ? 'page' : 'width';
   }
 

@@ -7,7 +7,7 @@
     "lint": "eslint js spike/spike.js",
     "build": "node scripts/build.js",
     "icons": "node scripts/icons.js",
-    "test": "node scripts/test.js"
+    "test": "node scripts/test.js && node scripts/sync-test.js"
   },
   "devDependencies": {
     "eslint": "^9.12.0",

@@ -294,3 +294,12 @@ button { font: inherit; color: inherit; }
 .fps-meter { position: fixed; left: 8px; top: 60px; z-index: 301; background: rgba(0,0,0,0.7); color: #9FD39F; font: 12px Menlo, monospace; padding: 3px 8px; border-radius: 6px; pointer-events: none; }
 
 .fatal { padding: 40px; text-align: center; }
+
+/* phone tweaks */
+.phone .ws-top .pill { padding: 0 9px; margin: 0 2px; }
+.phone .ws-top .pill-text { display: none; }
+.phone .ws-top .pill-dot { margin-right: 0; }
+.phone .ws-top .btn { margin-left: 0; min-width: 40px; padding: 0 6px; }
+.phone .topbar .pill { max-width: 170px; }
+.phone .search-wrap { margin: 12px 12px 4px; }
+.phone .dash-body { padding: 0 8px 40px; }
