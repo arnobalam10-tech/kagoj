@@ -22,7 +22,7 @@ Progress is tracked in [STATE.md](STATE.md).
 - [x] `spike/index.html`: single canvas, midpoint-smoothed finger drawing, Clear, FPS readout
 - [x] XHR test button (`/auth/v1/settings`, `/rest/v1/`), storage test button (IDB write/read/delete)
 - [x] Deployed at `/spike/` alongside the app so it can be opened on the iPad
-- [x] **Manual (owner):** test on iPad in Safari + home screen; install ISRG Root X1 / GTS Root R1 profile if certs fail
+- [ ] **Manual (owner):** test on iPad in Safari + home screen; install ISRG Root X1 / GTS Root R1 profile if certs fail
 
 ## Phase 1 — Drawing engine (single page)
 - [x] `core/util.js`, `core/dom.js`, `core/log.js`
