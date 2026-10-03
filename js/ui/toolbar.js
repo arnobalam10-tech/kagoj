@@ -18,7 +18,8 @@
       label: 'Eraser', icon: 'eraser', colors: [],
       sizes: [[8, 'Small'], [18, 'Medium'], [36, 'Large']]
     },
-    hand: { label: 'Hand', icon: 'hand', colors: [], sizes: [] }
+    hand: { label: 'Hand', icon: 'hand', colors: [], sizes: [] },
+    select: { label: 'Select images', icon: 'select', colors: [], sizes: [] }
   };
 
   var PREFS_KEY = 'kagoj.prefs';
@@ -29,7 +30,10 @@
     eraser: { size: 18, mode: 'partial' },
     reopenLast: true,
     fitMode: 'auto',
-    toolbarsHidden: false
+    toolbarsHidden: false,
+    pencilOnly: false,
+    pencilAsked: false,
+    wristGuard: 0
   };
 
   K.prefs = {
@@ -69,7 +73,7 @@
 
   Toolbar.prototype.toolButtons = function (into, onPicked) {
     var ws = this.ws, cur = ws.prefs.tool;
-    ['pen', 'highlighter', 'eraser', 'hand'].forEach(function (t) {
+    ['pen', 'highlighter', 'eraser', 'hand', 'select'].forEach(function (t) {
       var def = K.TOOLS[t];
       var b = D.button({ icon: def.icon, title: def.label, cls: 'tool' + (cur === t ? ' selected' : '') });
       D.tap(b, function () {
@@ -148,7 +152,7 @@
         left.appendChild(sep());
         if (mode === 'full') {
           this.styleButtons(left);
-        } else if (ws.prefs.tool !== 'hand') {
+        } else if (ws.prefs.tool !== 'hand' && ws.prefs.tool !== 'select') {
           var t = ws.prefs.tool, tp = ws.prefs[t];
           var sb = D.button({ title: 'Colour and size', cls: 'style-btn' });
           var dot = D.el('span.color-dot');

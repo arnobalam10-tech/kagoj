@@ -11,7 +11,7 @@
     root.style.height = window.innerHeight + 'px';
     root.style.width = window.innerWidth + 'px';
     document.body.classList.toggle('portrait', window.innerHeight > window.innerWidth);
-    document.body.classList.toggle('phone', U.isPhone());
+    document.body.classList.toggle('phone', U.isPhone() || window.innerWidth < 600);
     app.emit('resize');
   };
 
@@ -29,6 +29,44 @@
     }
     return '#/';
   };
+
+  // Second bundle (Uploads, page picker, PDF import, Settings, debug console).
+  // In development the files are already loaded; in production the build sets
+  // window.KAGOJ_EXTRAS to the hashed bundle URL.
+  var extrasWaiting = null;
+  app.extrasLoaded = function () { return !!(K.screens.settings && K.pickPages); };
+  app.loadExtras = function (cb) {
+    cb = cb || function () {};
+    if (app.extrasLoaded()) { cb(null); return; }
+    if (extrasWaiting) { extrasWaiting.push(cb); return; }
+    extrasWaiting = [cb];
+    var s = document.createElement('script');
+    s.src = window.KAGOJ_EXTRAS;
+    function finish(err) {
+      var list = extrasWaiting; extrasWaiting = null;
+      if (err) { D.remove(s); }
+      else if (K.debug && K.debug.isOn()) { K.debug.show(); }
+      for (var i = 0; i < list.length; i++) { list[i](err); }
+    }
+    s.onload = function () { finish(app.extrasLoaded() ? null : new Error('extras incomplete')); };
+    s.onerror = function () { finish(new Error('Could not load this part of the app. Check the connection.')); };
+    document.body.appendChild(s);
+  };
+
+  // Application Cache lets the iOS 9 home-screen app open with no network.
+  function watchAppCache() {
+    var ac = window.applicationCache;
+    if (!ac) { return; }
+    function ready() {
+      if (ac.status !== 4) { return; } // UPDATEREADY
+      try { ac.swapCache(); } catch (e) { /* ignore */ }
+      app.updateReady = true;
+      K.log('app update downloaded');
+      if (K.router.screenName !== 'workspace') { location.reload(); }
+    }
+    ac.addEventListener('updateready', ready, false);
+    ready();
+  }
 
   function fatal(msg) {
     D.empty(root);
@@ -64,7 +102,7 @@
         if (err2) { fatal('Could not read local data: ' + (err2.message || err2)); return; }
         K.Repo.purgeOld();
         K.Sync.start();
-        if (K.debug.isOn()) { K.debug.show(); }
+        if (K.debug && K.debug.isOn()) { K.debug.show(); }
         var splash = document.getElementById('splash');
         if (splash) { D.remove(splash); }
         if (!location.hash || location.hash === '#' || location.hash === '#/') {
@@ -73,6 +111,9 @@
           else { location.hash = h; }
         }
         K.router.start(root);
+        watchAppCache();
+        // fetch the second bundle in the background so it is ready (and cached)
+        setTimeout(function () { app.loadExtras(); }, 1500);
       });
     });
   };

@@ -2,15 +2,19 @@
   'use strict';
 
   var U = K.util, D = K.dom, G = K.geom, R = K.render;
+  var HANDLE = 26; // screen px for the resize handle hit area
 
   // One page on screen. Four stacked viewport-sized canvases:
-  // paper, highlight (CSS opacity 0.4), ink, live.
+  // paper (+ background / placed images), highlight (CSS opacity 0.4), ink, live.
   function Engine(host, opts) {
     this.host = host;
     this.opts = opts || {};
     this.vp = new K.Viewport();
     this.dpr = U.dpr();
     this.strokes = [];
+    this.imgs = [];          // placed images {id, a, x, y, w, h}
+    this.bgPath = null;      // page background (uploaded PDF page / photo)
+    this.assets = {};        // path -> HTMLImageElement | 'error'
     this.history = new K.History();
     this.paperStyle = 'ruled';
     this.pageId = null;
@@ -20,6 +24,8 @@
     this.erase = null;     // eraser gesture
     this.panState = null;
     this.pinch = null;
+    this.sel = null;       // selected image id
+    this.drag = null;      // image move/resize gesture
     this.rafId = null;
     this.needsFrame = false;
     this.lastFrameT = 0;
@@ -48,29 +54,59 @@
 
   // ---------- page / settings ----------
 
-  P.setPage = function (pageId, drawing, paper, history, fitMode) {
+  // opts: { bg: storage path of the page background }
+  P.setPage = function (pageId, drawing, paper, history, fitMode, opts) {
     this.cancel();
+    this.setSelection(null);
     this.pageId = pageId;
     this.strokes = K.codec.decode(drawing);
+    this.imgs = K.codec.decodeImgs(drawing);
+    this.vp.pw = (drawing && drawing.w) || K.config.pageW;
+    this.vp.ph = (drawing && drawing.h) || K.config.pageH;
+    this.bgPath = (opts && opts.bg) || null;
+    this.assets = {};
     this.history = history || new K.History();
     this.paperStyle = paper || 'ruled';
-    if (fitMode) { this.vp.fit(fitMode); }
+    if (fitMode) { this.vp.fit(fitMode); } else { this.vp.clamp(); }
     this.updateStats();
     this.render();
     this.notifyHistory();
+    this.loadAssets();
+  };
+
+  // Load background + placed images, re-rendering the paper layer as each arrives.
+  P.loadAssets = function () {
+    var self = this, page = this.pageId;
+    var paths = [];
+    if (this.bgPath) { paths.push(this.bgPath); }
+    for (var i = 0; i < this.imgs.length; i++) {
+      if (paths.indexOf(this.imgs[i].a) < 0) { paths.push(this.imgs[i].a); }
+    }
+    paths.forEach(function (p) {
+      if (self.assets[p]) { return; }
+      K.Assets.get(p, function (err, img) {
+        if (self.pageId !== page || self.destroyed) { return; }
+        self.assets[p] = err ? 'error' : img;
+        if (err) { K.log.warn('image not available: ' + (err.message || err)); }
+        self.renderPaper();
+        if (self.sel) { self.drawSelection(); }
+      });
+    });
   };
 
   P.setPaper = function (p) { this.paperStyle = p; this.renderPaper(); };
 
   P.setTool = function (t) {
     U.extend(this.tool, t);
+    if (this.tool.tool !== 'select') { this.setSelection(null); }
     this.clearLive();
+    if (this.sel) { this.drawSelection(); }
     if (this.opts.onCursor) { this.opts.onCursor(this.tool.tool); }
   };
 
-  P.setReadOnly = function (b) { this.readOnly = !!b; this.cancel(); };
+  P.setReadOnly = function (b) { this.readOnly = !!b; this.cancel(); this.setSelection(null); };
 
-  P.getDrawing = function () { return K.codec.encode(this.strokes); };
+  P.getDrawing = function () { return K.codec.encode(this.strokes, this.vp.pw, this.vp.ph, this.imgs); };
 
   P.updateStats = function () {
     var pts = 0;
@@ -103,8 +139,19 @@
     this.render();
   };
 
+  P.paperExtras = function () {
+    var self = this, hide = this.drag ? this.drag.id : null;
+    var imgs = [];
+    for (var i = 0; i < this.imgs.length; i++) {
+      var m = this.imgs[i];
+      if (m.id === hide) { continue; }
+      imgs.push({ x: m.x, y: m.y, w: m.w, h: m.h, img: self.assets[m.a] || null });
+    }
+    return { bg: this.bgPath ? { img: this.assets[this.bgPath] || null } : null, imgs: imgs };
+  };
+
   P.renderPaper = function () {
-    R.paper(this.x.paper, this.vp, this.paperStyle, this.dpr);
+    R.paper(this.x.paper, this.vp, this.paperStyle, this.dpr, this.paperExtras());
   };
 
   P.render = function () {
@@ -114,6 +161,7 @@
     R.layer(this.x.hl, this.vp, this.dpr, this.strokes, 'h', null);
     R.layer(this.x.ink, this.vp, this.dpr, this.strokes, 'p', null);
     this.clearLive();
+    if (this.sel) { this.drawSelection(); }
     K.stats.renderMs = Math.round(U.perfNow() - t0);
     if (this.opts.onView) { this.opts.onView(this.vp.zoomPct()); }
   };
@@ -149,6 +197,7 @@
     }
     this.lastFrameT = t0;
     if (this.cur) { this.drawLive(); }
+    else if (this.drag) { this.drawSelection(); }
     else if (this.erase || this.hoverPt) { this.drawEraserCursor(); }
     else if (this.pinch && this.pinch.k !== undefined) { this.applyCss(this.pinch.tx, this.pinch.ty, this.pinch.k); }
     else if (this.panState) { this.applyCss(this.panState.dx, this.panState.dy, 1); }
@@ -221,15 +270,153 @@
     x.stroke();
   };
 
+  // ---------- placed images: selection ----------
+
+  P.imgById = function (id) {
+    for (var i = 0; i < this.imgs.length; i++) { if (this.imgs[i].id === id) { return this.imgs[i]; } }
+    return null;
+  };
+
+  P.setSelection = function (id) {
+    if (this.sel === id) { return; }
+    this.sel = id;
+    if (!id) { this.clearLive(); } else { this.drawSelection(); }
+    if (this.opts.onSelect) { this.opts.onSelect(id); }
+  };
+
+  // Screen rect of a page-space rect
+  P.screenRect = function (r) {
+    var s = this.vp.scale;
+    return { x: r.x * s + this.vp.ox, y: r.y * s + this.vp.oy, w: r.w * s, h: r.h * s };
+  };
+
+  P.drawSelection = function () {
+    this.clearLive();
+    var m = this.drag ? this.drag.rect : this.imgById(this.sel);
+    if (!m) { return; }
+    var x = this.x.live;
+    x.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    var r = this.screenRect(m);
+    if (this.drag) {
+      var src = this.imgById(this.drag.id);
+      x.globalAlpha = 0.85;
+      R.drawImg(x, { img: src ? this.assets[src.a] : null }, r.x, r.y, r.w, r.h);
+      x.globalAlpha = 1;
+    }
+    x.lineWidth = 2;
+    x.strokeStyle = '#2F5DA8';
+    x.strokeRect(Math.round(r.x) + 0.5, Math.round(r.y) + 0.5, Math.round(r.w), Math.round(r.h));
+    // resize handle (bottom-right)
+    x.fillStyle = '#FFFFFF';
+    x.beginPath();
+    x.arc(r.x + r.w, r.y + r.h, 9, 0, 6.2832);
+    x.fill();
+    x.stroke();
+  };
+
+  P.hitImage = function (sx, sy) {
+    for (var i = this.imgs.length - 1; i >= 0; i--) {
+      var r = this.screenRect(this.imgs[i]);
+      if (sx >= r.x && sx <= r.x + r.w && sy >= r.y && sy <= r.y + r.h) { return this.imgs[i]; }
+    }
+    return null;
+  };
+
+  P.selectDown = function (sx, sy) {
+    var cur = this.imgById(this.sel);
+    if (cur) {
+      var r = this.screenRect(cur);
+      if (Math.abs(sx - (r.x + r.w)) < HANDLE && Math.abs(sy - (r.y + r.h)) < HANDLE) {
+        this.startDrag(cur, 'resize', sx, sy);
+        return;
+      }
+    }
+    var hit = this.hitImage(sx, sy);
+    if (!hit) { this.setSelection(null); return; }
+    this.setSelection(hit.id);
+    this.startDrag(hit, 'move', sx, sy);
+  };
+
+  P.startDrag = function (m, mode, sx, sy) {
+    this.drag = { id: m.id, mode: mode, sx: sx, sy: sy, r0: { x: m.x, y: m.y, w: m.w, h: m.h }, rect: { x: m.x, y: m.y, w: m.w, h: m.h }, moved: false };
+    this.renderPaper(); // without the dragged image; it follows the finger on the live layer
+    this.drawSelection();
+  };
+
+  P.dragMove = function (sx, sy) {
+    var d = this.drag, s = this.vp.scale;
+    var dx = (sx - d.sx) / s, dy = (sy - d.sy) / s;
+    if (Math.abs(sx - d.sx) + Math.abs(sy - d.sy) > 2) { d.moved = true; }
+    if (d.mode === 'move') {
+      d.rect.x = d.r0.x + dx;
+      d.rect.y = d.r0.y + dy;
+    } else {
+      var w = Math.max(40, d.r0.w + dx);
+      d.rect.w = w;
+      d.rect.h = w * d.r0.h / d.r0.w;
+    }
+    this.requestFrame();
+  };
+
+  P.endDrag = function () {
+    var d = this.drag;
+    this.drag = null;
+    var m = this.imgById(d.id);
+    if (m && d.moved) {
+      var before = d.r0, after = { x: d.rect.x, y: d.rect.y, w: d.rect.w, h: d.rect.h };
+      m.x = after.x; m.y = after.y; m.w = after.w; m.h = after.h;
+      this.history.push({ type: 'img-set', id: m.id, before: before, after: after });
+      this.changed();
+    }
+    this.renderPaper();
+    this.drawSelection();
+  };
+
+  // Place images on the current page: list of {a, ratio} (ratio = h / w)
+  P.addImages = function (list) {
+    var added = [];
+    var w = this.vp.pw * 0.6;
+    for (var i = 0; i < list.length; i++) {
+      var h = w * (list[i].ratio || 0.75);
+      var off = 30 * i;
+      added.push({
+        id: 'i_' + U.strokeId().substr(2), a: list[i].a,
+        x: (this.vp.pw - w) / 2 + off, y: Math.max(20, (this.vp.ph - h) / 4) + off, w: w, h: h
+      });
+    }
+    for (var j = 0; j < added.length; j++) { this.imgs.push(added[j]); }
+    this.history.push({ type: 'img-add', imgs: added });
+    this.loadAssets();
+    this.renderPaper();
+    this.changed();
+    if (added.length) { this.setSelection(added[added.length - 1].id); }
+  };
+
+  P.deleteSelected = function () {
+    var id = this.sel;
+    if (!id) { return; }
+    for (var i = 0; i < this.imgs.length; i++) {
+      if (this.imgs[i].id === id) {
+        var img = this.imgs.splice(i, 1)[0];
+        this.history.push({ type: 'img-del', img: img, i: i });
+        break;
+      }
+    }
+    this.setSelection(null);
+    this.renderPaper();
+    this.changed();
+  };
+
   // ---------- input handlers ----------
 
   P.down = function (sx, sy, kind) {
     if (this.pinch) { return; }
     var tool = this.tool.tool;
-    if (this.readOnly || tool === 'hand' || (this.input.spaceHeld && kind !== 'touch')) {
+    if (this.readOnly || tool === 'hand' || kind === 'finger-pan' || (this.input.spaceHeld && kind !== 'touch')) {
       this.panState = { lx: sx, ly: sy, dx: 0, dy: 0 };
       return;
     }
+    if (tool === 'select') { this.selectDown(sx, sy); return; }
     var pt = this.vp.toPage(sx, sy);
     if (tool === 'eraser') {
       this.erase = { steps: [], dirty: null, last: { x: pt.x, y: pt.y, sx: sx, sy: sy } };
@@ -256,6 +443,7 @@
       this.requestFrame();
       return;
     }
+    if (this.drag) { this.dragMove(sx, sy); return; }
     var pt = this.vp.toPage(sx, sy);
     if (this.erase) {
       var last = this.erase.last;
@@ -279,6 +467,7 @@
 
   P.up = function () {
     if (this.panState) { this.endPan(); return; }
+    if (this.drag) { this.endDrag(); return; }
     if (this.erase) { this.endErase(); return; }
     if (this.cur) { this.commit(); }
   };
@@ -287,7 +476,9 @@
     this.cur = null;
     if (this.erase) { this.endErase(); }
     if (this.panState) { this.endPan(); }
+    if (this.drag) { this.drag = null; this.renderPaper(); }
     this.clearLive();
+    if (this.sel) { this.drawSelection(); }
   };
 
   P.hover = function (sx, sy) {
@@ -295,6 +486,8 @@
     this.hoverPt = { sx: sx, sy: sy };
     this.requestFrame();
   };
+
+  P.onStylus = function () { if (this.opts.onStylus) { this.opts.onStylus(); } };
 
   // ---------- commit ----------
 
@@ -365,6 +558,7 @@
     if (this.cur) { this.cur = null; this.clearLive(); }
     if (this.erase) { this.endErase(); }
     if (this.panState) { this.endPan(); }
+    if (this.drag) { this.drag = null; this.renderPaper(); }
     var dx = b.x - a.x, dy = b.y - a.y;
     this.pinch = {
       start: this.vp.snapshot(),
@@ -415,20 +609,25 @@
 
   // ---------- commands ----------
 
-  P.undo = function () {
-    if (this.cur || this.erase) { return; }
-    var r = this.history.undo(this.strokes);
+  P.applyHistory = function (r) {
     if (!r) { return; }
-    if (r.full) { this.render(); } else { this.renderDirty(r.dirty); }
+    if (r.paper) {
+      if (this.sel && !this.imgById(this.sel)) { this.setSelection(null); }
+      this.loadAssets();
+      this.renderPaper();
+      if (this.sel) { this.drawSelection(); }
+    } else if (r.full) { this.render(); } else { this.renderDirty(r.dirty); }
     this.changed();
   };
 
+  P.undo = function () {
+    if (this.cur || this.erase || this.drag) { return; }
+    this.applyHistory(this.history.undo(this.strokes, this.imgs));
+  };
+
   P.redo = function () {
-    if (this.cur || this.erase) { return; }
-    var r = this.history.redo(this.strokes);
-    if (!r) { return; }
-    if (r.full) { this.render(); } else { this.renderDirty(r.dirty); }
-    this.changed();
+    if (this.cur || this.erase || this.drag) { return; }
+    this.applyHistory(this.history.redo(this.strokes, this.imgs));
   };
 
   P.clear = function () {
@@ -444,12 +643,14 @@
   P.zoomPct = function () { return this.vp.zoomPct(); };
 
   P.destroy = function () {
+    this.destroyed = true;
     this.input.destroy();
     if (this.rafId !== null) { U.caf(this.rafId); }
     // release canvas memory promptly (matters on iOS)
     for (var k in this.c) {
       if (Object.prototype.hasOwnProperty.call(this.c, k)) { this.c[k].width = 0; this.c[k].height = 0; }
     }
+    this.assets = {};
     D.remove(this.layers);
   };
 

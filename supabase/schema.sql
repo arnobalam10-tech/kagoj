@@ -72,3 +72,55 @@ create policy "own logs" on public.client_logs for all to authenticated
 -- Migration `kagoj_revoke_anon`: the anon role never needs these tables.
 revoke all on public.notebooks, public.pages, public.client_logs from anon;
 revoke all on sequence public.client_logs_id_seq from anon;
+
+-- ===================== v1.1: uploads (migration `kagoj_uploads_v1_1`) =====================
+create table if not exists public.folders (
+  id uuid primary key,
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  name text not null default 'New folder' check (char_length(name) <= 120),
+  position int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+create index if not exists folders_updated_idx on public.folders (user_id, updated_at);
+create trigger folders_touch before update on public.folders
+  for each row execute function public.touch_updated_at();
+alter table public.folders enable row level security;
+create policy "own folders" on public.folders for all to authenticated
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+revoke all on public.folders from anon;
+
+alter table public.notebooks
+  add column if not exists kind text not null default 'notebook' check (kind in ('notebook','document')),
+  add column if not exists folder_id uuid references public.folders(id) on delete set null,
+  add column if not exists source_name text check (source_name is null or char_length(source_name) <= 300);
+create index if not exists notebooks_folder_idx on public.notebooks (folder_id);
+alter table public.pages
+  add constraint pages_background_asset_len check (background_asset is null or char_length(background_asset) <= 300);
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('uploads', 'uploads', false, 52428800, array['image/jpeg','image/png','application/pdf'])
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+create policy "kagoj own uploads read" on storage.objects for select to authenticated
+  using (bucket_id = 'uploads' and (storage.foldername(name))[1] = (select auth.uid())::text);
+create policy "kagoj own uploads insert" on storage.objects for insert to authenticated
+  with check (bucket_id = 'uploads' and (storage.foldername(name))[1] = (select auth.uid())::text);
+create policy "kagoj own uploads update" on storage.objects for update to authenticated
+  using (bucket_id = 'uploads' and (storage.foldername(name))[1] = (select auth.uid())::text);
+create policy "kagoj own uploads delete" on storage.objects for delete to authenticated
+  using (bucket_id = 'uploads' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+create or replace function public.kagoj_asset_in_use(prefix text, exclude_notebook uuid)
+returns boolean language sql stable security invoker set search_path = '' as $$
+  select exists (
+    select 1 from public.pages p
+    join public.notebooks n on n.id = p.notebook_id
+    where p.notebook_id <> exclude_notebook
+      and p.deleted_at is null and n.deleted_at is null
+      and (p.background_asset like prefix || '%' or p.drawing::text like '%' || prefix || '%')
+  );
+$$;
+revoke all on function public.kagoj_asset_in_use(text, uuid) from anon, public;
+grant execute on function public.kagoj_asset_in_use(text, uuid) to authenticated;

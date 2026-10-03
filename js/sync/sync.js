@@ -4,8 +4,9 @@
   var U = K.util, Repo = K.Repo, sb = K.sb;
   var S = U.emitter({});
   var BACKOFF = [5, 15, 30, 60, 120];
-  var NB_COLS = 'id,title,cover_color,default_paper,page_count,last_opened_at,created_at,updated_at,deleted_at';
-  var PG_COLS = 'id,notebook_id,position,paper,revision,label,created_at,updated_at,deleted_at';
+  var NB_COLS = 'id,title,cover_color,default_paper,page_count,last_opened_at,created_at,updated_at,deleted_at,kind,folder_id,source_name';
+  var FD_COLS = 'id,name,position,created_at,updated_at,deleted_at';
+  var PG_COLS = 'id,notebook_id,position,paper,revision,label,background_asset,created_at,updated_at,deleted_at';
   var LIMIT = 500;
 
   var running = false, rerun = false, timer = null;
@@ -33,6 +34,7 @@
 
   function pendingCount() {
     var n = 0;
+    U.values(Repo.fds).forEach(function (x) { if (x.dirty && !x.failed) { n++; } });
     U.values(Repo.nbs).forEach(function (x) { if (x.dirty && !x.failed) { n++; } });
     U.values(Repo.pages).forEach(function (x) { if (x.dirty && !x.failed) { n++; } });
     return n;
@@ -80,7 +82,7 @@
     rerun = false;
     emitStatus();
     var t0 = Date.now();
-    U.series([pushNotebooks, pushPages, pull, flushLogs, purgeRemote], function (err) {
+    U.series([pushFolders, pushNotebooks, pushPages, pull, flushLogs, purgeRemote], function (err) {
       running = false;
       if (err) {
         failures++;
@@ -112,6 +114,7 @@
 
   function failedItemsText() {
     var f = null;
+    U.values(Repo.fds).forEach(function (x) { if (x.dirty && x.failed) { f = x.failed; } });
     U.values(Repo.nbs).forEach(function (x) { if (x.dirty && x.failed) { f = x.failed; } });
     U.values(Repo.pages).forEach(function (x) { if (x.dirty && x.failed) { f = x.failed; } });
     return f;
@@ -124,15 +127,44 @@
 
   // ---------- push ----------
 
+  function pushFolders(cb) {
+    var list = U.values(Repo.fds).filter(function (f) { return f.dirty && !f.failed; });
+    if (!list.length) { cb(); return; }
+    U.eachSeries(list, function (f, next) {
+      var v = f.lv;
+      sb.rest('POST', 'folders', {
+        body: [{ id: f.id, name: f.name, position: f.position || 0, deleted_at: f.deleted_at || null }],
+        prefer: 'resolution=merge-duplicates,return=minimal'
+      }, function (err) {
+        if (err) {
+          if (isFatal(err)) { next(err); return; }
+          markFailed(f, err, 'folders'); next(); return;
+        }
+        f.synced = true;
+        if (f.lv === v) { f.dirty = false; }
+        K.Store.put('folders', f);
+        next();
+      });
+    }, cb);
+  }
+
   function nbBody(nb) {
+    var f = nb.folder_id && Repo.fds[nb.folder_id];
     return {
       id: nb.id, title: nb.title, cover_color: nb.cover_color, default_paper: nb.default_paper,
-      page_count: nb.page_count, last_opened_at: nb.last_opened_at, deleted_at: nb.deleted_at || null
+      page_count: nb.page_count, last_opened_at: nb.last_opened_at, deleted_at: nb.deleted_at || null,
+      kind: nb.kind || 'notebook', source_name: nb.source_name || null,
+      // never reference a folder the server does not have yet
+      folder_id: f && (f.synced || !f.dirty) ? nb.folder_id : null
     };
   }
 
   function pushNotebooks(cb) {
-    var list = U.values(Repo.nbs).filter(function (n) { return n.dirty && !n.failed; });
+    var list = U.values(Repo.nbs).filter(function (n) {
+      if (!n.dirty || n.failed) { return false; }
+      var f = n.folder_id && Repo.fds[n.folder_id];
+      return !f || f.synced || !f.dirty;
+    });
     if (!list.length) { cb(); return; }
     var versions = list.map(function (n) { return n.lv; });
     sb.rest('POST', 'notebooks', {
@@ -178,7 +210,8 @@
   function pageBody(p, drawing) {
     return {
       id: p.id, notebook_id: p.notebook_id, position: p.position, paper: p.paper,
-      label: p.label || null, deleted_at: p.deleted_at || null, drawing: drawing
+      label: p.label || null, deleted_at: p.deleted_at || null, drawing: drawing,
+      background_asset: p.background_asset || null
     };
   }
 
@@ -279,6 +312,7 @@
     p.position = row.position;
     p.paper = row.paper;
     p.label = row.label || null;
+    p.background_asset = row.background_asset || null;
     p.deleted_at = row.deleted_at || null;
     p.created_at = row.created_at;
     p.updated_at = row.updated_at;
@@ -310,6 +344,19 @@
   function pull(cb) {
     var changed = false, toFetch = [];
     U.series([
+      function (next) {
+        pullTable('folders', FD_COLS, 'pullFd', function (row) {
+          var f = Repo.fds[row.id];
+          if (f && f.dirty) { return; }
+          f = f || { id: row.id };
+          U.extend(f, row);
+          f.synced = true;
+          f.dirty = false;
+          Repo.fds[f.id] = f;
+          K.Store.put('folders', f);
+          changed = true;
+        }, next);
+      },
       function (next) {
         pullTable('notebooks', NB_COLS, 'pullNb', function (row) {
           var nb = Repo.nbs[row.id];
@@ -387,19 +434,41 @@
   function purgeRemote(cb) {
     var last = Repo.meta('purgeAt', 0);
     if (Date.now() - last < 86400000) { cb(); return; }
-    var cutoff = new Date(Date.now() - 30 * 86400000).toISOString();
+    var cutoffMs = Date.now() - 30 * 86400000;
+    var cutoff = new Date(cutoffMs).toISOString();
     var q = '?deleted_at=lt.' + encodeURIComponent(cutoff);
-    sb.rest('DELETE', 'pages' + q, { prefer: 'return=minimal' }, function () {
-      sb.rest('DELETE', 'notebooks' + q, { prefer: 'return=minimal' }, function () {
-        Repo.setMeta('purgeAt', Date.now());
-        Repo.purgeOld();
-        cb();
+    var docs = U.values(Repo.nbs).filter(function (n) {
+      return n.kind === 'document' && n.deleted_at && U.parseTime(n.deleted_at) < cutoffMs;
+    });
+    // Delete a purged document's images unless another page still uses them.
+    U.eachSeries(docs, function (d, next) {
+      var prefix = sb.userId() + '/' + d.id + '/';
+      sb.rpc('kagoj_asset_in_use', { prefix: prefix, exclude_notebook: d.id }, function (err, inUse) {
+        if (err || inUse) { next(); return; }
+        var paths = [];
+        Repo.pagesOf(d.id, true).forEach(function (p) {
+          if (p.background_asset && p.background_asset.indexOf(prefix) === 0) {
+            paths.push(p.background_asset, K.Assets.thumbOf(p.background_asset));
+          }
+        });
+        sb.storageRemove(paths, function () { next(); });
+      });
+    }, function () {
+      sb.rest('DELETE', 'pages' + q, { prefer: 'return=minimal' }, function () {
+        sb.rest('DELETE', 'notebooks' + q, { prefer: 'return=minimal' }, function () {
+          sb.rest('DELETE', 'folders' + q, { prefer: 'return=minimal' }, function () {
+            Repo.setMeta('purgeAt', Date.now());
+            Repo.purgeOld();
+            cb();
+          });
+        });
       });
     });
   }
 
   // Re-try items that failed with a 4xx after the user taps "retry".
   S.retryFailed = function () {
+    U.values(Repo.fds).forEach(function (x) { x.failed = null; });
     U.values(Repo.nbs).forEach(function (x) { x.failed = null; });
     U.values(Repo.pages).forEach(function (x) { x.failed = null; });
     S.error = null;

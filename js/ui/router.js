@@ -10,6 +10,8 @@
     var parts = h.split('/').filter(function (x) { return x !== ''; });
     if (parts[0] === 'login') { return { name: 'login' }; }
     if (parts[0] === 'settings') { return { name: 'settings' }; }
+    if (parts[0] === 'uploads') { return { name: 'uploads' }; }
+    if (parts[0] === 'up' && parts[1]) { return { name: 'folder', id: parts[1] }; }
     if (parts[0] === 'nb' && parts[1]) {
       return { name: 'workspace', id: parts[1], page: Math.max(1, parseInt(parts[2], 10) || 1) };
     }
@@ -37,6 +39,15 @@
     var r = router.parse(location.hash);
     if (r.name !== 'login' && !K.app.canUseApp()) { router.go('#/login'); return; }
     var screen = K.screens[r.name];
+    if (!screen) {
+      K.app.loadExtras(function (err) {
+        if (err) { K.sheets.toast(err.message, 5000); if (r.name !== 'dashboard') { router.go('#/'); } return; }
+        router.handle();
+      });
+      return;
+    }
+    // reload into a freshly downloaded version when leaving the workspace
+    if (K.app.updateReady && r.name !== 'workspace') { location.reload(); return; }
     if (router.current && router.screenName === r.name && router.current.update && router.current.update(r)) {
       return;
     }

@@ -79,12 +79,19 @@
   function deletedSection() {
     var items = Repo.deletedItems();
     var rows = [];
+    items.folders.forEach(function (f) {
+      rows.push(row(f.name, smallBtn('Restore', function () {
+        Repo.restoreFolder(f.id);
+        sheets.toast('Restored folder “' + f.name + '”');
+        render();
+      }), 'Uploads folder · deleted ' + U.relTime(f.deleted_at)));
+    });
     items.notebooks.forEach(function (nb) {
       rows.push(row(nb.title, smallBtn('Restore', function () {
         Repo.restoreNotebook(nb.id);
         sheets.toast('Restored “' + nb.title + '”');
         render();
-      }), 'Notebook · deleted ' + U.relTime(nb.deleted_at)));
+      }), (Repo.isDocument(nb) ? 'Uploaded file' : 'Notebook') + ' · deleted ' + U.relTime(nb.deleted_at)));
     });
     items.pages.forEach(function (p) {
       var nb = Repo.notebook(p.notebook_id);
@@ -114,6 +121,10 @@
     var pages = live.length;
     var local = live.filter(function (p) { return !p.needsDrawing; }).length;
     rows.push(row('Notebooks / pages', D.el('span.set-value', { text: nbs + ' / ' + pages + (local !== pages ? ' (' + local + ' downloaded)' : '') })));
+    var au = K.Assets.usage();
+    rows.push(row('Saved page images', smallBtn('Clear', function () {
+      K.Assets.clear(function () { sheets.toast('Image cache cleared'); render(); });
+    }), (au.bytes / 1048576).toFixed(1) + ' MB of ' + Math.round(au.limit / 1048576) + ' MB · downloaded again when needed'));
     return section('Storage', rows);
   }
 
@@ -139,6 +150,13 @@
       row('Reopen last notebook on launch', toggle(p.reopenLast, function (v) { K.prefs.set('reopenLast', v); })),
       row('Default zoom', segmented([['auto', 'Auto'], ['width', 'Fit width'], ['page', 'Fit page']], p.fitMode, function (v) { K.prefs.set('fitMode', v); }),
         'Auto: whole page in portrait, page width in landscape')
+    ]));
+
+    body.appendChild(section('Palm rejection', [
+      row('Pencil only', toggle(p.pencilOnly, function (v) { K.prefs.set('pencilOnly', v); }),
+        'Apple Pencil writes; fingers scroll and zoom (newer iPads)'),
+      row('Wrist guard', toggle(!!p.wristGuard, function (v) { K.prefs.set('wristGuard', v ? 140 : 0); }),
+        'Ignore touches in a strip at the bottom of the page; drag its edge to resize')
     ]));
 
     body.appendChild(deletedSection());

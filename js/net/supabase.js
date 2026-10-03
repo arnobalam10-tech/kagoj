@@ -162,6 +162,62 @@
     attempt();
   };
 
+  // ---------- Storage (bucket "uploads") ----------
+
+  function encPath(p) { return p.split('/').map(encodeURIComponent).join('/'); }
+
+  function withToken(cb, fn) {
+    sb.getToken(function (err, token) {
+      if (err) { cb(err); return; }
+      fn(token);
+    });
+  }
+
+  sb.storageUpload = function (path, blob, contentType, cb, onProgress) {
+    withToken(cb, function (token) {
+      K.xhr({
+        method: 'POST',
+        url: base() + '/storage/v1/object/uploads/' + encPath(path),
+        headers: {
+          apikey: K.config.anonKey, Authorization: 'Bearer ' + token,
+          'Content-Type': contentType, 'x-upsert': 'true', 'Cache-Control': 'max-age=31536000'
+        },
+        body: blob, raw: true, timeout: 120000, onProgress: onProgress
+      }, function (err) { cb(err || null); });
+    });
+  };
+
+  // cb(err, blob)
+  sb.storageDownload = function (path, cb) {
+    withToken(cb, function (token) {
+      K.xhr({
+        method: 'GET',
+        url: base() + '/storage/v1/object/authenticated/uploads/' + encPath(path),
+        headers: { apikey: K.config.anonKey, Authorization: 'Bearer ' + token },
+        responseType: 'blob', timeout: 60000
+      }, function (err, res) {
+        if (err) { cb(err); return; }
+        cb(null, res.data);
+      });
+    });
+  };
+
+  sb.storageRemove = function (paths, cb) {
+    if (!paths.length) { cb(null); return; }
+    withToken(cb, function (token) {
+      K.xhr({
+        method: 'DELETE',
+        url: base() + '/storage/v1/object/uploads',
+        headers: { apikey: K.config.anonKey, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: { prefixes: paths }, timeout: 30000
+      }, function (err) { cb(err || null); });
+    });
+  };
+
+  sb.rpc = function (name, args, cb) {
+    sb.rest('POST', 'rpc/' + name, { body: args }, cb);
+  };
+
   sb.logout = function (cb) {
     var token = session && session.access_token;
     clearSession();

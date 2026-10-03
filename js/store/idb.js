@@ -4,7 +4,8 @@
   // IndexedDB adapter. Every store is keyed by `id`.
   // One object store per transaction: multi-store transactions were buggy on
   // early iOS IndexedDB, so we avoid them entirely.
-  var STORES = ['notebooks', 'pages', 'drawings', 'meta'];
+  var STORES = ['notebooks', 'pages', 'drawings', 'meta', 'folders', 'assets'];
+  var VERSION = 2;
 
   function IdbAdapter() { this.db = null; this.name = 'indexeddb'; }
 
@@ -16,7 +17,7 @@
     function once(err) { if (called) { return; } called = true; cb(err); }
     var guard = setTimeout(function () { once(new Error('indexedDB open timeout')); }, 4000);
     try {
-      req = idb.open('kagoj', 1);
+      req = idb.open('kagoj', VERSION);
     } catch (e) { clearTimeout(guard); once(e); return; }
     req.onupgradeneeded = function () {
       var db = req.result;

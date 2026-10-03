@@ -47,7 +47,19 @@
 
   // ---------- paper ----------
 
-  R.paper = function (ctx, vp, style, dpr) {
+  function drawImg(ctx, item, x, y, w, h) {
+    if (item && item.img && item.img !== 'error') {
+      try { ctx.drawImage(item.img, x, y, w, h); return; } catch (e) { /* fall through */ }
+    }
+    ctx.fillStyle = item && item.img === 'error' ? '#F3E3E1' : '#EFEDE7';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#DAD7CF';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(Math.round(x) + 0.5, Math.round(y) + 0.5, Math.round(w) - 1, Math.round(h) - 1);
+  }
+
+  // extras: { bg: {img}|null, imgs: [{x, y, w, h, img}] }
+  R.paper = function (ctx, vp, style, dpr, extras) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = R.DESK;
     ctx.fillRect(0, 0, vp.w, vp.h);
@@ -61,7 +73,29 @@
     ctx.restore();
 
     var pat = PATTERN[style];
-    if (!pat) { return; }
+    var s = vp.scale;
+    if (extras && extras.bg) {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x, y, pw, ph); ctx.clip();
+      drawImg(ctx, extras.bg, x, y, pw, ph);
+      ctx.restore();
+    }
+    if (pat) { R.pattern(ctx, vp, style, dpr, pat); }
+    if (extras && extras.imgs && extras.imgs.length) {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x, y, pw, ph); ctx.clip();
+      for (var m = 0; m < extras.imgs.length; m++) {
+        var it = extras.imgs[m];
+        drawImg(ctx, it, it.x * s + vp.ox, it.y * s + vp.oy, it.w * s, it.h * s);
+      }
+      ctx.restore();
+    }
+  };
+
+  R.drawImg = drawImg;
+
+  R.pattern = function (ctx, vp, style, dpr, pat) {
+    var x = vp.ox, y = vp.oy, pw = vp.pw * vp.scale, ph = vp.ph * vp.scale;
     ctx.save();
     ctx.beginPath();
     ctx.rect(x, y, pw, ph);

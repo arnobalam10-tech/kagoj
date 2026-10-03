@@ -24,6 +24,15 @@
       return { abort: function () {} };
     }
 
+    if (opts.responseType) {
+      try { xhr.responseType = opts.responseType; } catch (e) { /* ignore */ }
+    }
+    if (opts.onProgress && xhr.upload) {
+      xhr.upload.onprogress = function (ev) {
+        if (ev.lengthComputable) { opts.onProgress(ev.loaded / ev.total); }
+      };
+    }
+
     var headers = opts.headers || {};
     for (var k in headers) {
       if (Object.prototype.hasOwnProperty.call(headers, k)) { xhr.setRequestHeader(k, headers[k]); }
@@ -38,10 +47,16 @@
     xhr.onreadystatechange = function () {
       if (xhr.readyState !== 4 || done) { return; }
       var status = xhr.status;
-      var text = xhr.responseText || '';
+      var text = '';
       var data = null;
-      if (text) {
-        try { data = JSON.parse(text); } catch (e) { data = null; }
+      if (opts.responseType && opts.responseType !== 'text') {
+        data = xhr.response;
+        if (status >= 300) { data = null; } // binary error bodies are not parsed
+      } else {
+        text = xhr.responseText || '';
+        if (text) {
+          try { data = JSON.parse(text); } catch (e) { data = null; }
+        }
       }
       var res = {
         status: status,
@@ -61,7 +76,7 @@
 
     try {
       if (opts.body !== undefined && opts.body !== null) {
-        xhr.send(typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body));
+        xhr.send(opts.raw || typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body));
       } else {
         xhr.send();
       }

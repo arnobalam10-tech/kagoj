@@ -46,6 +46,17 @@
     return pill;
   };
 
+  // Notebooks | Uploads switch shown in the top bar of both sections
+  K.mainTabs = function (active) {
+    var wrap = D.el('div.segmented.main-tabs');
+    [['notebooks', 'Notebooks', '#/'], ['uploads', 'Uploads', '#/uploads']].forEach(function (t) {
+      var b = D.el('button.seg' + (t[0] === active ? '.selected' : ''), { type: 'button', text: t[1] });
+      D.tap(b, function () { if (t[0] !== active) { K.router.go(t[2]); } });
+      wrap.appendChild(b);
+    });
+    return wrap;
+  };
+
   // Paper preview tile (small canvas)
   K.paperTile = function (style, w, h) {
     var c = D.el('canvas.paper-tile');
@@ -265,7 +276,7 @@
     D.tap(settingsBtn, function () { K.router.go('#/settings'); });
     var top = D.el('header.topbar', null, [
       D.el('div.wordmark', null, [D.el('span.wm-en', { text: 'Kagoj' }), D.el('span.wm-bn', { text: 'কাগজ' })]),
-      D.el('div.spacer'), pill, settingsBtn
+      K.mainTabs('notebooks'), D.el('div.spacer'), pill, settingsBtn
     ]);
     var search = D.el('input.search', {
       type: 'search', placeholder: 'Search notebooks', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false'

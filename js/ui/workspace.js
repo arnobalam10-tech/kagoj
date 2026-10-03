@@ -36,8 +36,12 @@
         self.undoBtn.classList.toggle('disabled', !u);
         self.redoBtn.classList.toggle('disabled', !r);
       },
-      onView: function (pct) { self.zoomPct = pct; self.toolbar.setZoom(pct); }
+      onView: function (pct) { self.zoomPct = pct; self.toolbar.setZoom(pct); },
+      onSelect: function (id) { self.selBar.style.display = id ? '' : 'none'; },
+      onStylus: function () { self.offerPencilOnly(); }
     });
+    this.selBar.style.display = 'none';
+    this.applyPalm();
     this.applyTool();
     this.engine.setReadOnly(this.readOnly);
     this.bindEvents();
@@ -52,7 +56,7 @@
   P.build = function () {
     var self = this;
     var back = D.button({ icon: 'back', label: U.isPhone() ? null : 'Back', title: 'Back to notebooks', cls: 'back-btn' });
-    D.tap(back, function () { K.router.go('#/'); });
+    D.tap(back, function () { K.router.go(self.backHash()); });
     this.titleBtn = D.button({ label: this.nb.title, title: 'Rename notebook', cls: 'title-btn' });
     D.tap(this.titleBtn, function () { K.renameNotebook(self.nb); });
     this.undoBtn = D.button({ icon: 'undo', title: 'Undo', cls: 'disabled' });
@@ -76,8 +80,29 @@
     D.tap(this.showBtn, function () { self.setToolbarsHidden(false); });
     D.append(this.root, [this.top, this.stage, this.toolbar.el, this.showBtn]);
     this.stage.appendChild(this.msg);
+    // floating bar while an image is selected
+    var del = D.button({ icon: 'trash', label: 'Delete image', cls: 'danger' });
+    D.tap(del, function () { self.engine.deleteSelected(); });
+    var done = D.button({ label: 'Done' });
+    D.tap(done, function () { self.engine.setSelection(null); });
+    this.selBar = D.el('div.sel-bar', null, [del, done]);
+    this.stage.appendChild(this.selBar);
+    // overlays inside the stage must not reach the drawing input underneath
+    [this.selBar, this.msg].forEach(function (el) {
+      ['touchstart', 'touchmove', 'touchend', 'pointerdown', 'pointermove', 'pointerup', 'mousedown'].forEach(function (ev) {
+        D.on(el, ev, function (e) { e.stopPropagation(); });
+      });
+    });
+    // wrist guard (ignored zone at the bottom), height adjustable by its handle
+    this.guard = D.el('div.wrist-guard', null, D.el('div.guard-handle', null, D.el('span', { text: 'Wrist guard ↕' })));
+    this.stage.appendChild(this.guard);
+    this.bindGuard();
     this.root.classList.toggle('bars-hidden', !!this.prefs.toolbarsHidden);
     this.toolbar.render();
+  };
+
+  P.backHash = function () {
+    return Repo.isDocument(this.nb) ? '#/up/' + (this.nb.folder_id && Repo.folder(this.nb.folder_id) ? this.nb.folder_id : 'unfiled') : '#/';
   };
 
   P.setToolbarsHidden = function (h) {
@@ -177,7 +202,7 @@
     Repo.loadDrawing(p.id, function (err, d) {
       if (token !== self.loadToken || self.destroyed) { return; }
       if (err) {
-        self.engine.setPage(null, Repo.emptyDrawing(), p.paper, null, fitModeFor());
+        self.engine.setPage(null, Repo.emptyDrawing(), p.paper, null, fitModeFor(), { bg: p.background_asset });
         self.showMsg(err.type === 'network' || err.type === 'timeout'
           ? 'This page isn’t on this device yet. Connect to the internet to download it.'
           : (err.message || 'Could not load this page'), true);
@@ -185,10 +210,10 @@
       }
       self.showMsg('');
       if (!self.histories[p.id]) { self.histories[p.id] = new K.History(); }
-      self.engine.setPage(p.id, d, p.paper, self.histories[p.id], fitModeFor());
+      self.engine.setPage(p.id, d, p.paper, self.histories[p.id], fitModeFor(), { bg: p.background_asset });
       // pre-load the next page from local storage so "›" feels instant
       var nx = self.pages[idx + 1];
-      if (nx) { setTimeout(function () { Repo.preload(nx.id); }, 300); }
+      if (nx) { setTimeout(function () { Repo.preload(nx.id); K.Assets.prefetch(nx.background_asset); }, 300); }
       if (first) { self.prefetchNotebook(); }
     });
   };
@@ -253,6 +278,7 @@
       items: [
         { label: 'Paper style…', icon: 'paper', onTap: function () { self.paperMenu(); } },
         { label: 'Page list', icon: 'list', onTap: function () { self.pageList(); } },
+        { label: 'Import from Uploads…', icon: 'upload', onTap: function () { self.importFromUploads(); } },
         { label: 'Fit whole page', icon: 'fit', onTap: function () { self.engine.fit('page'); } },
         { label: 'Fit page width', icon: 'fit', onTap: function () { self.engine.fit('width'); } },
         { label: this.readOnly ? 'Write mode' : 'View mode (no writing)', icon: this.readOnly ? 'pencil' : 'eye', onTap: function () { self.setReadOnly(!self.readOnly); } },
@@ -303,6 +329,96 @@
       self.refreshPages();
       self.openPage(Math.min(idx, self.pages.length - 1));
       sheets.toast('Page deleted');
+    });
+  };
+
+  // ---------- uploads / images ----------
+
+  P.importFromUploads = function () {
+    var self = this;
+    K.app.loadExtras(function (err) {
+      if (err) { sheets.toast(err.message, 4000); return; }
+      self.openPicker();
+    });
+  };
+
+  P.openPicker = function () {
+    var self = this;
+    K.pickPages({ actions: [{ label: 'Place on this page' }, { label: 'Add as new pages', primary: true }] }, function (idx, items) {
+      if (idx === 0) {
+        if (self.readOnly) { self.setReadOnly(false); }
+        self.engine.addImages(items);
+        self.setTool('select');
+        sheets.toast('Drag to move, drag the corner to resize');
+        return;
+      }
+      self.flushSave();
+      var after = self.page ? self.page.id : null, first = null;
+      items.forEach(function (it) {
+        var p = Repo.addPage(self.nb.id, after, 'blank', { background_asset: it.a, w: 1000, h: Math.round(1000 * it.ratio) });
+        after = p.id;
+        first = first || p;
+      });
+      Repo.recount(self.nb.id);
+      self.refreshPages();
+      for (var i = 0; i < self.pages.length; i++) {
+        if (self.pages[i].id === first.id) { self.openPage(i); break; }
+      }
+      sheets.toast(items.length + (items.length === 1 ? ' page' : ' pages') + ' added');
+    });
+  };
+
+  // ---------- palm rejection ----------
+
+  P.applyPalm = function () {
+    var p = K.prefs.all();
+    this.engine.input.pencilOnly = !!p.pencilOnly;
+    this.engine.input.guardPx = p.wristGuard || 0;
+    this.guard.style.display = p.wristGuard ? '' : 'none';
+    this.guard.style.height = (p.wristGuard || 0) + 'px';
+  };
+
+  P.bindGuard = function () {
+    var self = this, handle = this.guard.firstChild, startY = 0, startH = 0;
+    function y(e) { return e.touches ? e.touches[0].clientY : e.clientY; }
+    function down(e) {
+      e.stopPropagation();
+      if (e.cancelable) { e.preventDefault(); }
+      startY = y(e); startH = K.prefs.get('wristGuard') || 140;
+      self.guardDrag = true;
+    }
+    function move(e) {
+      if (!self.guardDrag) { return; }
+      e.stopPropagation();
+      if (e.cancelable) { e.preventDefault(); }
+      var h = U.clamp(startH - (y(e) - startY), 60, Math.round(self.stage.clientHeight * 0.7));
+      self.guard.style.height = h + 'px';
+      self.engine.input.guardPx = h;
+    }
+    function up() {
+      if (!self.guardDrag) { return; }
+      self.guardDrag = false;
+      K.prefs.set('wristGuard', parseInt(self.guard.style.height, 10) || 140);
+    }
+    D.on(handle, 'touchstart', down, D.passiveFalse);
+    D.on(handle, 'touchmove', move, D.passiveFalse);
+    D.on(handle, 'touchend', up);
+    D.on(handle, 'mousedown', down);
+    D.on(handle, 'pointerdown', function (e) { e.stopPropagation(); });
+    this.unbind.push(D.on(window, 'mousemove', move));
+    this.unbind.push(D.on(window, 'mouseup', up));
+  };
+
+  P.offerPencilOnly = function () {
+    var self = this;
+    if (K.prefs.get('pencilOnly') || K.prefs.get('pencilAsked')) { return; }
+    K.prefs.set('pencilAsked', true);
+    sheets.confirm({
+      title: 'Apple Pencil detected',
+      message: 'Turn on Pencil-only mode? Only the Pencil writes; fingers scroll and zoom, and your palm is ignored. You can change this in Settings.',
+      ok: 'Turn on'
+    }, function (ok) {
+      if (ok) { K.prefs.set('pencilOnly', true); self.applyPalm(); }
     });
   };
 

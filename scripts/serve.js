@@ -8,7 +8,10 @@ http.createServer(function (req, res) {
   var p = decodeURIComponent(req.url.split('?')[0]);
   if (p.endsWith('/')) p += 'index.html';
   var f = path.join(root, p);
-  if (f.indexOf(root) !== 0) { res.writeHead(403); res.end(); return; }
+  if (p.indexOf('/vendor/pdfjs/') === 0 && !fs.existsSync(f)) {
+    f = path.join(__dirname, '..', 'node_modules', 'pdfjs-dist', 'legacy', 'build', path.basename(p));
+  }
+  if (f.indexOf(root) !== 0 && f.indexOf('pdfjs-dist') < 0) { res.writeHead(403); res.end(); return; }
   fs.readFile(f, function (err, data) {
     if (err) { res.writeHead(404); res.end('not found'); return; }
     res.writeHead(200, { 'Content-Type': types[path.extname(f)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });

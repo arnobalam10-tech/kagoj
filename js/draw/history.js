@@ -25,9 +25,35 @@
     for (var i = 0; i < list.length; i++) { strokes.push(list[i]); }
   }
 
-  // Each returns { dirty: rect|null, full: bool }
-  function apply(op, strokes, forward) {
+  function imgIndex(imgs, id) {
+    for (var i = 0; i < imgs.length; i++) { if (imgs[i].id === id) { return i; } }
+    return -1;
+  }
+
+  // Each returns { dirty: rect|null, full: bool, paper: bool }
+  function apply(op, strokes, forward, imgs) {
     var i, st, dirty = null;
+    if (op.type === 'img-add') {
+      for (i = 0; i < op.imgs.length; i++) {
+        var k = imgIndex(imgs, op.imgs[i].id);
+        if (forward && k < 0) { imgs.push(op.imgs[i]); }
+        if (!forward && k >= 0) { imgs.splice(k, 1); }
+      }
+      return { dirty: null, full: false, paper: true };
+    }
+    if (op.type === 'img-del') {
+      if (forward) { i = imgIndex(imgs, op.img.id); if (i >= 0) { imgs.splice(i, 1); } }
+      else { imgs.splice(Math.min(op.i, imgs.length), 0, op.img); }
+      return { dirty: null, full: false, paper: true };
+    }
+    if (op.type === 'img-set') {
+      i = imgIndex(imgs, op.id);
+      if (i >= 0) {
+        var r = forward ? op.after : op.before;
+        imgs[i].x = r.x; imgs[i].y = r.y; imgs[i].w = r.w; imgs[i].h = r.h;
+      }
+      return { dirty: null, full: false, paper: true };
+    }
     if (op.type === 'add') {
       if (forward) { strokes.push(op.stroke); }
       else {
@@ -59,18 +85,18 @@
     return { dirty: null, full: true };
   }
 
-  History.prototype.undo = function (strokes) {
+  History.prototype.undo = function (strokes, imgs) {
     var op = this.undos.pop();
     if (!op) { return null; }
     this.redos.push(op);
-    return apply(op, strokes, false);
+    return apply(op, strokes, false, imgs || []);
   };
 
-  History.prototype.redo = function (strokes) {
+  History.prototype.redo = function (strokes, imgs) {
     var op = this.redos.pop();
     if (!op) { return null; }
     this.undos.push(op);
-    return apply(op, strokes, true);
+    return apply(op, strokes, true, imgs || []);
   };
 
   K.History = History;

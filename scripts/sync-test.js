@@ -11,7 +11,8 @@ var ROOT = path.resolve(__dirname, '..');
 
 // ---------------- mock server ----------------
 var server = {
-  tables: { notebooks: [], pages: [], client_logs: [] },
+  tables: { notebooks: [], pages: [], client_logs: [], folders: [] },
+  storage: {}, removed: [],
   clock: Date.UTC(2026, 9, 3, 10, 0, 0),
   tokens: {}, refreshCount: 0, online: true, n: 0
 };
@@ -44,8 +45,9 @@ function pick(row, sel) {
   return JSON.parse(JSON.stringify(o));
 }
 var DEFAULTS = {
-  notebooks: function () { return { title: 'Untitled notebook', cover_color: '#2F3640', default_paper: 'ruled', page_count: 0, last_opened_at: null, deleted_at: null }; },
-  pages: function () { return { paper: 'ruled', drawing: { v: 1, w: 1000, h: 1414, strokes: [] }, revision: 1, label: null, deleted_at: null }; },
+  notebooks: function () { return { title: 'Untitled notebook', cover_color: '#2F3640', default_paper: 'ruled', page_count: 0, last_opened_at: null, deleted_at: null, kind: 'notebook', folder_id: null, source_name: null }; },
+  folders: function () { return { name: 'New folder', position: 0, deleted_at: null }; },
+  pages: function () { return { paper: 'ruled', drawing: { v: 1, w: 1000, h: 1414, strokes: [] }, revision: 1, label: null, background_asset: null, deleted_at: null }; },
   client_logs: function () { return {}; }
 };
 function handle(opts) {
@@ -64,6 +66,22 @@ function handle(opts) {
     return [200, { access_token: t2, refresh_token: 'ref' + server.n, expires_in: 3600 }];
   }
   if (p === '/auth/v1/logout') { return [204, null]; }
+  if (p.indexOf('/storage/v1/object') === 0) {
+    if (!server.tokens[auth]) { return [401, null]; }
+    if (opts.method === 'DELETE') { body.prefixes.forEach(function (k) { delete server.storage[k]; server.removed.push(k); }); return [200, []]; }
+    var key = decodeURIComponent(p.replace('/storage/v1/object/authenticated/uploads/', '').replace('/storage/v1/object/uploads/', ''));
+    if (opts.method === 'POST') { server.storage[key] = 'bytes'; return [200, { Key: key }]; }
+    return server.storage[key] ? [200, 'blob'] : [404, null];
+  }
+  if (p === '/rest/v1/rpc/kagoj_asset_in_use') {
+    if (!server.tokens[auth]) { return [401, null]; }
+    var pre = body.prefix;
+    var used = server.tables.pages.some(function (pg) {
+      return pg.notebook_id !== body.exclude_notebook && !pg.deleted_at &&
+        ((pg.background_asset || '').indexOf(pre) === 0 || JSON.stringify(pg.drawing).indexOf(pre) >= 0);
+    });
+    return [200, used];
+  }
   var table = p.replace('/rest/v1/', '');
   if (!server.tokens[auth]) { return [401, { message: 'JWT expired' }]; }
   var rows = server.tables[table], qq = parseQuery(q);
@@ -75,6 +93,13 @@ function handle(opts) {
     return [200, hit.map(function (r) { return pick(r, qq.select); })];
   }
   if (opts.method === 'POST') {
+    if (table === 'notebooks') {
+      (Array.isArray(body) ? body : [body]).forEach(function (b) {
+        if (b.folder_id && !server.tables.folders.some(function (f) { return f.id === b.folder_id; })) {
+          throw { status: 409, data: { code: '23503', message: 'folder fk violation' } };
+        }
+      });
+    }
     var out = [];
     (Array.isArray(body) ? body : [body]).forEach(function (b) {
       if (table === 'pages' && !server.tables.notebooks.some(function (n) { return n.id === b.notebook_id; })) {
@@ -123,7 +148,7 @@ function mockXhr(opts, cb) {
 
 // ---------------- devices ----------------
 var FILES = ['js/config.js', 'js/core/util.js', 'js/core/dom.js', 'js/core/log.js', 'js/net/xhr.js', 'js/net/supabase.js',
-  'js/store/idb.js', 'js/store/ls.js', 'js/store/store.js', 'js/store/repo.js',
+  'js/store/idb.js', 'js/store/ls.js', 'js/store/store.js', 'js/store/repo.js', 'js/store/assets.js',
   'js/draw/geometry.js', 'js/draw/codec.js', 'js/sync/sync.js'];
 
 function device(name, ua) {
@@ -274,6 +299,97 @@ async function test(name, fn) {
     assert.ifError(await sync(B));
     assert.strictEqual(B.Repo.pagesOf(nbId).length, 4);
     assert.strictEqual(A.Repo.dirtyCount(), 0);
+  });
+
+  console.log('uploads: folders & documents');
+  var folderId, docId, docPage1;
+  await test('folder + document sync; documents stay out of the Notebooks tab', async function () {
+    var f = A.Repo.createFolder('Anatomy');
+    folderId = f.id;
+    var uid = A.sb.userId();
+    var did = A.util.uuid();
+    ['p001', 't001', 'p002', 't002'].forEach(function (n) { server.storage[uid + '/' + did + '/' + n + '.jpg'] = 'x'; });
+    var doc = A.Repo.createDocument({ id: did, folderId: f.id, title: 'Lecture 1', sourceName: 'lecture1.pdf', pages: [
+      { asset: uid + '/' + did + '/p001.jpg', w: 1000, h: 563 },
+      { asset: uid + '/' + did + '/p002.jpg', w: 1000, h: 563 }
+    ] });
+    docId = doc.id;
+    await flushWrites(A);
+    assert.ifError(await sync(A));
+    assert.strictEqual(server.tables.folders.length, 1);
+    var row = server.tables.notebooks.filter(function (n) { return n.id === docId; })[0];
+    assert.strictEqual(row.kind, 'document');
+    assert.strictEqual(row.folder_id, folderId);
+    var pgs = server.tables.pages.filter(function (pg) { return pg.notebook_id === docId; })
+      .sort(function (a, b) { return a.position - b.position; });
+    assert.strictEqual(pgs.length, 2);
+    assert.ok(/p001[.]jpg$/.test(pgs[0].background_asset));
+    assert.strictEqual(pgs[0].drawing.h, 563);
+    assert.ifError(await sync(B));
+    assert.strictEqual(B.Repo.folders().length, 1);
+    assert.strictEqual(B.Repo.documents(folderId).length, 1);
+    assert.ok(B.Repo.notebooks().every(function (n) { return n.kind !== 'document'; }));
+    docPage1 = B.Repo.pagesOf(docId)[0];
+    assert.ok(/p001[.]jpg$/.test(docPage1.background_asset));
+    var d = await cb2p(function (cb) { B.Repo.loadDrawing(docPage1.id, cb); });
+    assert.strictEqual(d.h, 563);
+  });
+  await test('writing on a document page syncs like any notebook page', async function () {
+    B.Repo.saveDrawing(docPage1.id, { v: 1, w: 1000, h: 563, strokes: drawingWith(B, ['s_docnote1']).strokes,
+      imgs: [{ id: 'i_1', a: docPage1.background_asset, x: 10, y: 10, w: 200, h: 113 }] });
+    await flushWrites(B);
+    assert.ifError(await sync(B));
+    assert.ifError(await sync(A));
+    var d = await cb2p(function (cb) { A.Repo.loadDrawing(docPage1.id, cb); });
+    assert.strictEqual(d.strokes[0].id, 's_docnote1');
+    assert.strictEqual(d.imgs[0].a, docPage1.background_asset);
+  });
+  await test('import document pages into a notebook (pages keep the background)', async function () {
+    var before = A.Repo.pagesOf(nbId).length;
+    var p = A.Repo.addPage(nbId, null, 'blank', { background_asset: docPage1.background_asset, w: 1000, h: 563 });
+    A.Repo.recount(nbId);
+    await flushWrites(A);
+    assert.ifError(await sync(A));
+    assert.ifError(await sync(B));
+    assert.strictEqual(B.Repo.page(p.id).background_asset, docPage1.background_asset);
+    assert.strictEqual(B.Repo.pagesOf(nbId).length, before + 1);
+  });
+  await test('deleting a folder deletes its documents; restore brings both back', async function () {
+    A.Repo.deleteFolder(folderId);
+    await flushWrites(A);
+    assert.ifError(await sync(A));
+    assert.ifError(await sync(B));
+    assert.strictEqual(B.Repo.folders().length, 0);
+    assert.strictEqual(B.Repo.documents().length, 0);
+    var del = B.Repo.deletedItems();
+    assert.strictEqual(del.folders.length, 1);
+    assert.strictEqual(del.notebooks.filter(function (n) { return n.id === docId; }).length, 0);
+    B.Repo.restoreFolder(folderId);
+    await flushWrites(B);
+    assert.ifError(await sync(B));
+    assert.ifError(await sync(A));
+    assert.strictEqual(A.Repo.documents(folderId).length, 1);
+  });
+  await test('purge deletes a document\'s files only when nothing else uses them', async function () {
+    var uid = A.sb.userId();
+    var lone = A.util.uuid();
+    server.storage[uid + '/' + lone + '/p001.jpg'] = 'x';
+    server.storage[uid + '/' + lone + '/t001.jpg'] = 'x';
+    A.Repo.createDocument({ id: lone, folderId: folderId, title: 'Old handout', pages: [{ asset: uid + '/' + lone + '/p001.jpg', w: 1000, h: 1414 }] });
+    await flushWrites(A);
+    assert.ifError(await sync(A));
+    var long = new Date(Date.now() - 40 * 86400000).toISOString();
+    [lone, docId].forEach(function (id) {
+      A.Repo.nbs[id].deleted_at = long;
+      A.Repo.nbs[id].dirty = false;
+      server.tables.notebooks.forEach(function (n) { if (n.id === id) { n.deleted_at = long; } });
+    });
+    A.Repo.setMeta('purgeAt', 0);
+    assert.ifError(await sync(A));
+    assert.ok(!server.storage[uid + '/' + lone + '/p001.jpg'], 'unused document files removed');
+    assert.ok(!server.storage[uid + '/' + lone + '/t001.jpg']);
+    assert.ok(server.storage[uid + '/' + docId + '/p001.jpg'], 'files still used by a notebook page are kept');
+    assert.strictEqual(server.tables.notebooks.filter(function (n) { return n.id === lone; }).length, 0);
   });
 
   console.log('deletes, offline, auth');

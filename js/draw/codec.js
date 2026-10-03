@@ -24,10 +24,27 @@
     return K.geom.finishStroke(s);
   };
 
-  C.encode = function (strokes) {
+  function r1(v) { return Math.round(v * 10) / 10; }
+
+  // w/h: page size in page units (default A4 1000 x 1414); imgs: placed images
+  C.encode = function (strokes, w, h, imgs) {
     var out = [];
     for (var i = 0; i < strokes.length; i++) { out.push(C.encodeStroke(strokes[i])); }
-    return { v: 1, w: K.config.pageW, h: K.config.pageH, strokes: out };
+    var d = { v: 1, w: w || K.config.pageW, h: h || K.config.pageH, strokes: out };
+    if (imgs && imgs.length) {
+      d.imgs = imgs.map(function (m) { return { id: m.id, a: m.a, x: r1(m.x), y: r1(m.y), w: r1(m.w), h: r1(m.h) }; });
+    }
+    return d;
+  };
+
+  C.decodeImgs = function (d) {
+    var out = [];
+    if (!d || !d.imgs) { return out; }
+    for (var i = 0; i < d.imgs.length; i++) {
+      var m = d.imgs[i];
+      if (m && m.a && m.w > 0 && m.h > 0) { out.push({ id: m.id, a: m.a, x: +m.x, y: +m.y, w: +m.w, h: +m.h }); }
+    }
+    return out;
   };
 
   C.decode = function (d) {

@@ -16,15 +16,15 @@ var win = {
     removeItem: function (k) { delete store[k]; }
   },
   addEventListener: function () {}, removeEventListener: function () {},
-  devicePixelRatio: 1, crypto: require('crypto').webcrypto
+  Object: Object, devicePixelRatio: 1, crypto: require('crypto').webcrypto
 };
 win.window = win;
 var ctx = vm.createContext(Object.assign(win, {
   console: console, setTimeout: setTimeout, clearTimeout: clearTimeout, Date: Date, Math: Math, JSON: JSON,
   Uint8Array: Uint8Array, document: { addEventListener: function () {} }
 }));
-['js/config.js', 'js/core/util.js', 'js/core/log.js', 'js/draw/geometry.js', 'js/draw/codec.js',
- 'js/draw/eraser.js', 'js/draw/history.js', 'js/draw/viewport.js'].forEach(function (f) {
+['js/config.js', 'js/core/util.js', 'js/core/dom.js', 'js/core/log.js', 'js/draw/geometry.js', 'js/draw/codec.js',
+ 'js/draw/eraser.js', 'js/draw/history.js', 'js/draw/viewport.js', 'js/draw/input.js'].forEach(function (f) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
 });
 var K = win.Kagoj;
@@ -134,6 +134,82 @@ test('history depth capped at 100', function () {
   var h = new K.History();
   for (var i = 0; i < 150; i++) { h.push({ type: 'add', stroke: line(0, 4, i, 'i' + i) }); }
   assert.strictEqual(h.undos.length, 100);
+});
+
+console.log('images');
+test('codec keeps page size and placed images', function () {
+  var d = K.codec.encode([], 1000, 563, [{ id: 'i_1', a: 'u/d/p001.jpg', x: 10.04, y: 20, w: 300.26, h: 169 }]);
+  assert.strictEqual(d.h, 563);
+  assert.strictEqual(d.imgs[0].x, 10);
+  assert.strictEqual(d.imgs[0].w, 300.3);
+  var back = K.codec.decodeImgs(JSON.parse(JSON.stringify(d)));
+  assert.strictEqual(back.length, 1);
+  assert.strictEqual(back[0].a, 'u/d/p001.jpg');
+  assert.strictEqual(K.codec.encode([]).imgs, undefined);
+});
+test('image add / move / delete undo and redo', function () {
+  var h = new K.History(), strokes = [], imgs = [];
+  var a = { id: 'i_a', a: 'x', x: 0, y: 0, w: 100, h: 50 };
+  imgs.push(a); h.push({ type: 'img-add', imgs: [a] });
+  a.x = 40; h.push({ type: 'img-set', id: 'i_a', before: { x: 0, y: 0, w: 100, h: 50 }, after: { x: 40, y: 0, w: 100, h: 50 } });
+  imgs.splice(0, 1); h.push({ type: 'img-del', img: a, i: 0 });
+  assert.strictEqual(imgs.length, 0);
+  var r = h.undo(strokes, imgs); assert.ok(r.paper); assert.strictEqual(imgs.length, 1);
+  h.undo(strokes, imgs); assert.strictEqual(imgs[0].x, 0);
+  h.undo(strokes, imgs); assert.strictEqual(imgs.length, 0);
+  h.redo(strokes, imgs); h.redo(strokes, imgs); assert.strictEqual(imgs[0].x, 40);
+  h.redo(strokes, imgs); assert.strictEqual(imgs.length, 0);
+});
+test('viewport fits a landscape (slide) page', function () {
+  var v = new K.Viewport(); v.pw = 1000; v.ph = 563; v.resize(768, 900);
+  v.fit('page');
+  near(v.scale, (768 - 48) / 1000);
+  assert.ok(v.oy > 24);   // centred vertically
+});
+
+console.log('palm rejection (input)');
+function palmRig(opts) {
+  var log = [];
+  var el = { addEventListener: function () {}, removeEventListener: function () {},
+    getBoundingClientRect: function () { return { left: 0, top: 0, width: 400, height: 600 }; } };
+  var h = { down: function (x, y, k) { log.push('down:' + k); }, move: function () { if (log[log.length - 1] !== 'move') { log.push('move'); } },
+    up: function () { log.push('up'); }, cancel: function () { log.push('cancel'); }, gestureStart: function () { log.push('gesture'); },
+    gestureMove: function () {}, gestureEnd: function () { log.push('gestureEnd'); }, wheel: function () {}, pan: function () {} };
+  var inp = new K.Input(el, h);
+  inp.pencilOnly = !!opts.pencilOnly; inp.guardPx = opts.guardPx || 0;
+  return { inp: inp, log: log };
+}
+function T(id, x, y, type) { return { identifier: id, clientX: x, clientY: y, touchType: type }; }
+function ev(changed, all) { return { cancelable: true, preventDefault: function () {}, changedTouches: changed, touches: all }; }
+test('wrist guard: a resting palm does not turn writing into a pinch', function () {
+  var r = palmRig({ guardPx: 140 }), palm = T(1, 200, 560), p = T(2, 100, 100);
+  r.inp.touchStart(ev([palm], [palm]));
+  r.inp.touchStart(ev([p], [palm, p]));
+  p = T(2, 130, 110); r.inp.touchMove(ev([p], [palm, p]));
+  r.inp.touchEnd(ev([p], [palm]));
+  assert.strictEqual(r.log.join(' '), 'down:touch move up');
+  r.inp.destroy();
+});
+test('pencil only: fingers pan, the Pencil writes even with palms down', function () {
+  var r = palmRig({ pencilOnly: true });
+  var f = T(1, 100, 300, 'direct'); r.inp.touchStart(ev([f], [f])); r.inp.touchEnd(ev([f], []));
+  assert.strictEqual(r.log.join(' '), 'down:finger-pan up');
+  r.log.length = 0;
+  var palm = T(5, 250, 400, 'direct'), pen = T(6, 80, 120, 'stylus'), palm2 = T(7, 300, 420, 'direct');
+  r.inp.touchStart(ev([palm], [palm]));
+  r.inp.touchStart(ev([pen], [palm, pen]));
+  pen = T(6, 100, 120, 'stylus'); r.inp.touchMove(ev([pen], [palm, pen]));
+  r.inp.touchStart(ev([palm2], [palm, pen, palm2]));
+  pen = T(6, 120, 120, 'stylus'); r.inp.touchMove(ev([pen], [palm, pen, palm2]));
+  r.inp.touchEnd(ev([pen], [palm, palm2]));
+  assert.strictEqual(r.log.join(' '), 'down:finger-pan up down:touch move up');
+  r.inp.destroy();
+});
+test('pencil only: two fingers still pinch-zoom', function () {
+  var r = palmRig({ pencilOnly: true }), a = T(1, 100, 100, 'direct'), b = T(2, 200, 200, 'direct');
+  r.inp.touchStart(ev([a], [a])); r.inp.touchStart(ev([b], [a, b])); r.inp.touchEnd(ev([a, b], []));
+  assert.strictEqual(r.log.join(' '), 'down:finger-pan cancel gesture gestureEnd');
+  r.inp.destroy();
 });
 
 console.log('viewport');

@@ -19,6 +19,10 @@
     this.g = null;         // gesture touch ids
     this.rect = null;
     this.spaceHeld = false;
+    this.pencilOnly = false; // fingers pan, only an Apple Pencil writes
+    this.guardPx = 0;        // wrist guard: ignore touches starting this close to the bottom
+    this.stylusSeen = false;
+    this.ignored = {};       // touch ids treated as palm
     this.unbind = [];
     this.bind();
   }
@@ -83,29 +87,78 @@
     this.h.gestureStart(this.local(a.clientX, a.clientY), this.local(b.clientX, b.clientY));
   };
 
+  // Touches that count: everything except palms/wrists we decided to ignore.
+  Input.prototype.live = function (list) {
+    var out = [];
+    for (var i = 0; i < list.length; i++) { if (!this.ignored[list[i].identifier]) { out.push(list[i]); } }
+    return out;
+  };
+
   Input.prototype.touchStart = function (e) {
     if (e.cancelable) { e.preventDefault(); }
     this.rect = this.el.getBoundingClientRect();
-    var n = e.touches.length;
+    var i, c, newcomer = null;
+    for (i = 0; i < e.changedTouches.length; i++) {
+      c = e.changedTouches[i];
+      var stylus = c.touchType === 'stylus';
+      if (stylus && !this.stylusSeen) {
+        this.stylusSeen = true;
+        if (this.h.onStylus) { this.h.onStylus(); }
+      }
+      var cp = this.local(c.clientX, c.clientY);
+      if (!stylus && this.guardPx && cp.y > this.rect.height - this.guardPx) {
+        this.ignored[c.identifier] = true;   // resting wrist / palm in the guard zone
+        continue;
+      }
+      if (stylus && this.pencilOnly && this.state !== 'idle') {
+        // The Pencil always wins: stop any finger pan/pinch, ignore those fingers.
+        if (this.state === 'gesture') { this.h.gestureEnd(); }
+        else if (this.state === 'active' && this.fingerPan) { this.h.up(); }
+        else if (this.state === 'pending') { if (this.timer) { clearTimeout(this.timer); this.timer = null; } }
+        for (var j = 0; j < e.touches.length; j++) {
+          if (e.touches[j].identifier !== c.identifier) { this.ignored[e.touches[j].identifier] = true; }
+        }
+        this.state = 'idle';
+      }
+      if (!this.ignored[c.identifier]) { newcomer = newcomer || c; }
+    }
+    if (!newcomer) { return; }
+    var list = this.live(e.touches);
+    var n = list.length;
     if (this.state === 'idle' && n === 1) {
-      var t = e.changedTouches[0];
+      var t = list[0];
+      var isStylus = t.touchType === 'stylus';
+      var lp = this.local(t.clientX, t.clientY);
+      this.fingerPan = false;
+      this.stylusStroke = isStylus;
       this.id = t.identifier;
       this.t0 = Date.now();
-      this.buf = [this.local(t.clientX, t.clientY)];
+      if (this.pencilOnly && !isStylus) {
+        this.state = 'active';
+        this.fingerPan = true;
+        this.h.down(lp.x, lp.y, 'finger-pan');
+        return;
+      }
+      this.buf = [lp];
       this.state = 'pending';
       var self = this;
       this.timer = setTimeout(function () { self.activate(); }, PENDING_MS);
       return;
     }
     if (n >= 2) {
-      if (this.state === 'pending') { this.startGesture(e.touches); return; }
-      if (this.state === 'active' && Date.now() - this.t0 < 250) {
+      if (this.stylusStroke && this.pencilOnly && (this.state === 'active' || this.state === 'pending')) {
+        // fingers landing while the Pencil writes are palms: ignore them
+        for (i = 0; i < list.length; i++) { if (list[i].identifier !== this.id) { this.ignored[list[i].identifier] = true; } }
+        return;
+      }
+      if (this.state === 'pending') { this.startGesture(list); return; }
+      if (this.state === 'active' && (this.fingerPan || Date.now() - this.t0 < 250)) {
         this.h.cancel();
-        this.startGesture(e.touches);
+        this.startGesture(list);
         return;
       }
       if (this.state === 'idle' || this.state === 'ignore') {
-        this.startGesture(e.touches);
+        this.startGesture(list);
       }
     }
   };
@@ -137,22 +190,25 @@
   Input.prototype.touchEnd = function (e, cancelled) {
     if (e.cancelable) { e.preventDefault(); }
     var ended = findTouch(e.changedTouches, this.id);
+    for (var i = 0; i < e.changedTouches.length; i++) { delete this.ignored[e.changedTouches[i].identifier]; }
+    var left = this.live(e.touches).length;
     if (this.state === 'pending' && ended) {
       this.activate();          // a quick tap becomes a dot
       this.h.up();
-      this.state = e.touches.length ? 'ignore' : 'idle';
+      this.state = left ? 'ignore' : 'idle';
     } else if (this.state === 'active' && ended) {
       this.h.up();
-      this.state = e.touches.length ? 'ignore' : 'idle';
+      this.state = left ? 'ignore' : 'idle';
     } else if (this.state === 'gesture') {
-      if (e.touches.length < 2) {
+      if (left < 2) {
         this.h.gestureEnd();
-        this.state = e.touches.length ? 'ignore' : 'idle';
+        this.state = left ? 'ignore' : 'idle';
       }
-    } else if (!e.touches.length) {
+    } else if (!left) {
       this.state = 'idle';
     }
-    if (!e.touches.length && this.state === 'ignore') { this.state = 'idle'; }
+    if (!left && this.state === 'ignore') { this.state = 'idle'; }
+    if (!e.touches.length) { this.ignored = {}; }
   };
 
   // ---------- pointer (mouse / pen on modern browsers) ----------
