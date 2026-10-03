@@ -102,7 +102,7 @@
       def.sizes.forEach(function (sz, i) {
         var b = D.el('button.btn.size' + (tp.size === sz[0] ? '.selected' : ''), { type: 'button', title: sz[1], 'aria-label': sz[1] });
         var bar = D.el('span.size-bar' + (tool === 'eraser' ? '.size-ring' : ''));
-        var px = tool === 'eraser' ? [8, 13, 20][i] : [2, 4, 7][i];
+        var px = tool === 'eraser' ? [8, 13, 20][i] : (tool === 'highlighter' ? [8, 12, 17][i] : [3, 5, 8][i]);
         bar.style.width = px + 'px';
         bar.style.height = px + 'px';
         if (tool !== 'eraser') { bar.style.backgroundColor = tp.color; }

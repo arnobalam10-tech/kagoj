@@ -303,3 +303,4 @@ button { font: inherit; color: inherit; }
 .phone .topbar .pill { max-width: 170px; }
 .phone .search-wrap { margin: 12px 12px 4px; }
 .phone .dash-body { padding: 0 8px 40px; }
+.btn.size .size-bar { box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12); }
