@@ -290,3 +290,20 @@ button { font: inherit; color: inherit; }
 .phone .topbar .pill-dot { margin-right: 0; }
 .phone .upload-btn { padding: 0 10px; }
 .phone .upload-btn .btn-label { display: none; }
+
+/* writing band (palm rejection) */
+.band {
+  position: absolute; z-index: 2; pointer-events: none;
+  border-top: 2px solid rgba(47,93,168,0.55); border-bottom: 2px solid rgba(47,93,168,0.55);
+  background: rgba(47,93,168,0.04);
+  box-shadow: 0 0 0 4000px rgba(40,38,34,0.10);
+}
+.band-ctl {
+  position: absolute; left: 6px; bottom: 100%; margin-bottom: 4px; pointer-events: auto; white-space: nowrap;
+  background: #F7F6F2; border: 1px solid #DAD7CF; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.18); padding: 2px;
+}
+.band-ctl.below { bottom: auto; top: 100%; margin: 4px 0 0; }
+.band-ctl .btn, .band-grip { display: inline-block; vertical-align: middle; min-width: 44px; height: 40px; padding: 0; }
+.band-grip { text-align: center; color: #8A93A0; cursor: ns-resize; line-height: 40px; }
+.band-grip .icon { width: 20px; height: 20px; }
+.band-toggle.active { background: #2F5DA8; color: #fff; }

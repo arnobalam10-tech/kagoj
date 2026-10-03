@@ -33,7 +33,9 @@
     toolbarsHidden: false,
     pencilOnly: false,
     pencilAsked: false,
-    wristGuard: 0
+    wristGuard: 0,
+    band: false,
+    bandLines: 4
   };
 
   K.prefs = {

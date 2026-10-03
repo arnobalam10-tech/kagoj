@@ -66,12 +66,14 @@
     this.modeBtn = D.button({ icon: this.readOnly ? 'pencil' : 'eye', title: this.readOnly ? 'Write mode' : 'View mode', cls: 'mode-toggle' });
     D.tap(this.modeBtn, function () { self.setReadOnly(!self.readOnly); });
     this.pill = K.statusPill();
+    this.bandBtn = D.button({ icon: 'band', title: 'Writing band (palm rejection)', cls: 'band-toggle' });
+    D.tap(this.bandBtn, function () { self.toggleBand(); });
     var more = D.button({ icon: 'more', title: 'More' });
     D.tap(more, function () { self.moreMenu(); });
 
     this.top = D.el('header.topbar.ws-top', null, [
       back, D.el('div.title-wrap', null, this.titleBtn), this.undoBtn, this.redoBtn,
-      D.el('div.spacer'), this.pill, this.modeBtn, more
+      D.el('div.spacer'), this.pill, this.bandBtn, this.modeBtn, more
     ]);
     this.stage = D.el('div.stage');
     this.msg = D.el('div.stage-msg');
@@ -370,8 +372,18 @@
 
   // ---------- palm rejection ----------
 
+  P.toggleBand = function () {
+    var on = !K.prefs.get('band');
+    K.prefs.set('band', on);
+    if (on && this.readOnly) { this.setReadOnly(false); }
+    this.applyPalm();
+    sheets.toast(on ? 'Writing band on: only touches inside the band write. \u25B2\u25BC move it.' : 'Writing band off', 3500);
+  };
+
   P.applyPalm = function () {
     var p = K.prefs.all();
+    this.engine.setBand(!!p.band, p.bandLines || 4);
+    this.bandBtn.classList.toggle('active', !!p.band);
     this.engine.input.pencilOnly = !!p.pencilOnly;
     this.engine.input.guardPx = p.wristGuard || 0;
     this.guard.style.display = p.wristGuard ? '' : 'none';

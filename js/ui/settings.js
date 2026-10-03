@@ -153,6 +153,9 @@
     ]));
 
     body.appendChild(section('Palm rejection', [
+      row('Writing band', toggle(!!p.band, function (v) { K.prefs.set('band', v); }),
+        'Only touches inside a strip of a few lines write; \u25B2\u25BC move it. Also in the notebook top bar.'),
+      row('Band height', segmented([[3, '3 lines'], [4, '4 lines'], [5, '5 lines']], p.bandLines || 4, function (v) { K.prefs.set('bandLines', v); })),
       row('Pencil only', toggle(p.pencilOnly, function (v) { K.prefs.set('pencilOnly', v); }),
         'Apple Pencil writes; fingers scroll and zoom (newer iPads)'),
       row('Wrist guard', toggle(!!p.wristGuard, function (v) { K.prefs.set('wristGuard', v ? 140 : 0); }),

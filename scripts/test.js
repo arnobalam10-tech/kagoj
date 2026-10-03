@@ -24,7 +24,7 @@ var ctx = vm.createContext(Object.assign(win, {
   Uint8Array: Uint8Array, document: { addEventListener: function () {} }
 }));
 ['js/config.js', 'js/core/util.js', 'js/core/dom.js', 'js/core/log.js', 'js/draw/geometry.js', 'js/draw/codec.js',
- 'js/draw/eraser.js', 'js/draw/history.js', 'js/draw/viewport.js', 'js/draw/input.js'].forEach(function (f) {
+ 'js/draw/eraser.js', 'js/draw/history.js', 'js/draw/viewport.js', 'js/draw/band.js', 'js/draw/input.js'].forEach(function (f) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
 });
 var K = win.Kagoj;
@@ -210,6 +210,40 @@ test('pencil only: two fingers still pinch-zoom', function () {
   r.inp.touchStart(ev([a], [a])); r.inp.touchStart(ev([b], [a, b])); r.inp.touchEnd(ev([a, b], []));
   assert.strictEqual(r.log.join(' '), 'down:finger-pan cancel gesture gestureEnd');
   r.inp.destroy();
+});
+
+console.log('writing band');
+test('band snaps to ruled rows and stays on the page', function () {
+  var B = K.band;
+  assert.strictEqual(B.height(4), 4 * 36 + 12);
+  assert.strictEqual(B.initial(4, 1414), 74 - 6);          // first row starts at 74 (first line 110)
+  assert.strictEqual(B.snap(100, 4, 1414), 74 + 36 - 6);    // nearest row
+  assert.strictEqual(B.step(68, 4, 1414, 1), 68 + 144);     // next 4 lines
+  assert.strictEqual(B.step(68, 4, 1414, -1), 0);           // clamped at the top
+  var last = B.snap(5000, 4, 1414);
+  assert.ok(last + B.height(4) <= 1414 && last > 1200);
+  assert.ok(B.contains(68, 4, 100, 0) && !B.contains(68, 4, 300, 0));
+});
+test('band: touches outside are ignored, so a palm never becomes a pinch', function () {
+  var log = [];
+  var el = { addEventListener: function () {}, removeEventListener: function () {},
+    getBoundingClientRect: function () { return { left: 0, top: 0, width: 400, height: 600 }; } };
+  var h = { down: function () { log.push('down'); }, move: function () { if (log[log.length - 1] !== 'move') { log.push('move'); } },
+    up: function () { log.push('up'); }, cancel: function () { log.push('cancel'); }, gestureStart: function () { log.push('gesture'); },
+    gestureMove: function () {}, gestureEnd: function () {}, wheel: function () {}, pan: function () {},
+    acceptsTouch: function (x, y) { return y >= 100 && y <= 200; } };
+  var inp = new K.Input(el, h);
+  function T(id, x, y) { return { identifier: id, clientX: x, clientY: y }; }
+  function ev(c, a) { return { cancelable: true, preventDefault: function () {}, changedTouches: c, touches: a }; }
+  var palm = T(1, 300, 450);
+  inp.touchStart(ev([palm], [palm]));             // palm below the band: ignored
+  var p = T(2, 50, 150);
+  inp.touchStart(ev([p], [palm, p]));             // finger inside the band: writes
+  p = T(2, 90, 160); inp.touchMove(ev([p], [palm, p]));
+  p = T(2, 120, 260); inp.touchMove(ev([p], [palm, p]));   // may leave the band once started
+  inp.touchEnd(ev([p], [palm]));
+  assert.strictEqual(log.join(' '), 'down move up');
+  inp.destroy();
 });
 
 console.log('viewport');

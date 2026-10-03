@@ -30,6 +30,8 @@
     this.needsFrame = false;
     this.lastFrameT = 0;
     this.hoverPt = null;
+    this.band = { on: false, n: 4, y: 0 };  // writing band (palm rejection)
+    this.bandY = {};                           // band position per page
 
     this.layers = D.el('div.layers');
     this.c = {
@@ -40,6 +42,7 @@
     };
     D.append(this.layers, [this.c.paper, this.c.hl, this.c.ink, this.c.live]);
     host.appendChild(this.layers);
+    this.buildBand();
     this.x = {
       paper: this.c.paper.getContext('2d'),
       hl: this.c.hl.getContext('2d'),
@@ -68,6 +71,8 @@
     this.history = history || new K.History();
     this.paperStyle = paper || 'ruled';
     if (fitMode) { this.vp.fit(fitMode); } else { this.vp.clamp(); }
+    this.band.y = this.bandY[pageId] !== undefined ? this.bandY[pageId] : K.band.initial(this.band.n, this.vp.ph);
+    if (this.band.on) { this.ensureBandVisible(true); }
     this.updateStats();
     this.render();
     this.notifyHistory();
@@ -104,7 +109,7 @@
     if (this.opts.onCursor) { this.opts.onCursor(this.tool.tool); }
   };
 
-  P.setReadOnly = function (b) { this.readOnly = !!b; this.cancel(); this.setSelection(null); };
+  P.setReadOnly = function (b) { this.readOnly = !!b; this.cancel(); this.setSelection(null); this.positionBand(); };
 
   P.getDrawing = function () { return K.codec.encode(this.strokes, this.vp.pw, this.vp.ph, this.imgs); };
 
@@ -162,6 +167,7 @@
     R.layer(this.x.ink, this.vp, this.dpr, this.strokes, 'p', null);
     this.clearLive();
     if (this.sel) { this.drawSelection(); }
+    this.positionBand();
     K.stats.renderMs = Math.round(U.perfNow() - t0);
     if (this.opts.onView) { this.opts.onView(this.vp.zoomPct()); }
   };
@@ -607,6 +613,104 @@
     U.raf(function () { self.renderPending = false; self.render(); });
   };
 
+  // ---------- writing band ----------
+
+  P.buildBand = function () {
+    var self = this;
+    var up = D.button({ icon: 'chevron-up', title: 'Move band up', cls: 'band-btn' });
+    var down = D.button({ icon: 'chevron-down', title: 'Next lines', cls: 'band-btn' });
+    var grip = D.el('div.band-grip', { title: 'Drag to move the band' }, D.icon('grip'));
+    D.tap(up, function () { self.bandStep(-1); });
+    D.tap(down, function () { self.bandStep(1); });
+    var ctl = D.el('div.band-ctl', null, [up, grip, down]);
+    // the controls must never reach the drawing input underneath
+    ['touchstart', 'touchmove', 'touchend', 'pointerdown', 'pointermove', 'pointerup', 'mousedown'].forEach(function (ev) {
+      D.on(ctl, ev, function (e) { e.stopPropagation(); });
+    });
+    var startY = 0, startBand = 0, dragging = false;
+    function y(e) { return e.touches ? e.touches[0].clientY : e.clientY; }
+    function dDown(e) {
+      if (e.cancelable) { e.preventDefault(); }
+      dragging = true; startY = y(e); startBand = self.band.y;
+    }
+    function dMove(e) {
+      if (!dragging) { return; }
+      if (e.cancelable) { e.preventDefault(); }
+      var maxY = Math.max(0, self.vp.ph - K.band.height(self.band.n));
+      self.band.y = U.clamp(startBand + (y(e) - startY) / self.vp.scale, 0, maxY);
+      self.positionBand();
+    }
+    function dUp() {
+      if (!dragging) { return; }
+      dragging = false;
+      self.band.y = K.band.snap(self.band.y, self.band.n, self.vp.ph);
+      self.bandY[self.pageId] = self.band.y;
+      self.positionBand();
+    }
+    D.on(grip, 'touchstart', dDown, D.passiveFalse);
+    D.on(grip, 'touchmove', dMove, D.passiveFalse);
+    D.on(grip, 'touchend', dUp);
+    D.on(grip, 'mousedown', dDown);
+    this.unbindBand = [D.on(window, 'mousemove', dMove), D.on(window, 'mouseup', dUp)];
+    this.bandCtl = ctl;
+    this.bandEl = D.el('div.band', null, ctl);
+    this.bandEl.style.display = 'none';
+    this.layers.appendChild(this.bandEl);
+  };
+
+  P.setBand = function (on, n) {
+    this.band.on = !!on;
+    if (n && n !== this.band.n) {
+      this.band.n = n;
+      this.band.y = K.band.snap(this.band.y, n, this.vp.ph);
+    }
+    if (this.band.on) { this.ensureBandVisible(false); }
+    this.positionBand();
+  };
+
+  P.positionBand = function () {
+    var el = this.bandEl;
+    if (!el) { return; }
+    if (!this.band.on || this.readOnly) { el.style.display = 'none'; return; }
+    var s = this.vp.scale;
+    el.style.display = '';
+    el.style.left = Math.round(this.vp.ox) + 'px';
+    el.style.top = Math.round(this.vp.oy + this.band.y * s) + 'px';
+    el.style.width = Math.round(this.vp.pw * s) + 'px';
+    el.style.height = Math.round(K.band.height(this.band.n) * s) + 'px';
+    // keep the controls on screen even when the page's left edge is scrolled away
+    this.bandCtl.style.left = Math.max(6, 6 - Math.round(this.vp.ox)) + 'px';
+    // controls sit above the band, or below it when there is no room
+    this.bandCtl.classList.toggle('below', this.vp.oy + this.band.y * s < 52);
+  };
+
+  // Keep the band in a comfortable part of the screen; scroll the page if needed.
+  P.ensureBandVisible = function (quiet) {
+    var s = this.vp.scale, vh = this.vp.h;
+    var top = this.vp.oy + this.band.y * s, bottom = top + K.band.height(this.band.n) * s;
+    if (top < vh * 0.08 || bottom > vh * 0.78) {
+      this.vp.oy = vh * 0.3 - this.band.y * s;
+      this.vp.clamp();
+      if (!quiet) { this.render(); return; }
+    }
+    this.positionBand();
+  };
+
+  P.bandStep = function (dir) {
+    this.band.y = K.band.step(this.band.y, this.band.n, this.vp.ph, dir);
+    this.bandY[this.pageId] = this.band.y;
+    this.ensureBandVisible(false);
+  };
+
+  // Called by the input layer for every new touch.
+  P.acceptsTouch = function (sx, sy) {
+    if (!this.band.on || this.readOnly) { return true; }
+    var t = this.tool.tool;
+    if (t === 'hand' || t === 'select') { return true; }
+    var py = (sy - this.vp.oy) / this.vp.scale;
+    return K.band.contains(this.band.y, this.band.n, py, 6 / this.vp.scale);
+  };
+
   // ---------- commands ----------
 
   P.applyHistory = function (r) {
@@ -645,6 +749,7 @@
   P.destroy = function () {
     this.destroyed = true;
     this.input.destroy();
+    if (this.unbindBand) { this.unbindBand.forEach(function (f) { f(); }); }
     if (this.rafId !== null) { U.caf(this.rafId); }
     // release canvas memory promptly (matters on iOS)
     for (var k in this.c) {

@@ -3,7 +3,7 @@
 _Last updated: 2026-10-03_
 
 ## Status
-**v1.1 (Uploads + image placement + palm rejection) is built, tested and pushed; v1 is live at https://kagoj-three.vercel.app.**
+**v1.2 (writing band) on top of v1.1 (Uploads + image placement + palm rejection) is built, tested and pushed; v1 is live at https://kagoj-three.vercel.app.**
 Not yet verified: a real login and sync against Supabase (needs the owner's password), and anything on the physical iPad 2.
 
 ## Infrastructure
@@ -34,8 +34,15 @@ Not yet verified: a real login and sync against Supabase (needs the owner's pass
 - **Two bundles**: startup `app.js` 108.8 KB (budget 120), `extra.js` 30.7 KB loaded right after start (Uploads, picker, importer, Settings, debug, plus their CSS), CSS 15.3 KB (budget 20).
 - Fixed along the way: tapping overlays inside the page (selection bar, page messages, wrist-guard handle) no longer reaches the drawing surface; narrow desktop windows use the phone layout; `/spike` script path.
 
+## Done — v1.2 (writing band)
+- **Writing band** (palm rejection): a strip 3/4/5 ruled lines tall across the page; only touches that *start* inside it write (strokes may run outside). Everything else is dimmed and ignored, so a resting palm never writes and never turns writing into a pinch. Toggle in the notebook top bar (band icon) and in Settings → Palm rejection, with the height setting.
+- Controls above the band (below it near the top of the screen): ▲ / ▼ move it one band height, the grip drags it; it snaps to ruled rows. Moving it past the screen scrolls the page to keep it in view. Position is remembered per page while the notebook is open.
+- Band does not filter the Hand and Select tools; pinch-zoom works with fingers inside the band; toolbar zoom always works.
+- Verified at iPad portrait size: stroke inside the band with a palm resting below → written; stroke outside → ignored; ▼ moves exactly 4 lines. Unit tests for band geometry and input filtering.
+- Bundles: startup 112.6 KB / 120, extra 31.0 KB, CSS 16.0 KB / 20.
+
 ## Tests (run inside `npm run build`; a failure blocks deploy)
-- `scripts/test.js`: 22 unit tests (geometry, codec incl. page size + images, eraser, history incl. image ops, viewport incl. landscape pages, palm rejection input logic)
+- `scripts/test.js`: 24 unit tests (incl. writing band) (geometry, codec incl. page size + images, eraser, history incl. image ops, viewport incl. landscape pages, palm rejection input logic)
 - `scripts/sync-test.js`: 18 integration tests, two simulated devices against a mock Supabase (REST, RPC, Storage): push/pull, lazy download, revision guard, conflict copy, folders + documents, document writing sync, import into notebook, folder delete/restore, purge keeps shared files, soft delete, offline retry, 401 refresh, masked logs
 - Browser (dev build + in-page Storage stand-in): 3-page PDF upload (portrait/landscape/portrait), photo upload, document opens with background, writing on it saves, slide page is landscape, import picker, place image, move, resize, undo, delete, add as new pages, wrist guard with synthetic multi-touch
 

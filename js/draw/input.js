@@ -110,6 +110,10 @@
         this.ignored[c.identifier] = true;   // resting wrist / palm in the guard zone
         continue;
       }
+      if (this.h.acceptsTouch && !this.h.acceptsTouch(cp.x, cp.y)) {
+        this.ignored[c.identifier] = true;   // outside the writing band
+        continue;
+      }
       if (stylus && this.pencilOnly && this.state !== 'idle') {
         // The Pencil always wins: stop any finger pan/pinch, ignore those fingers.
         if (this.state === 'gesture') { this.h.gestureEnd(); }

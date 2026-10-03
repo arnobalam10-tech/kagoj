@@ -124,3 +124,12 @@ Notebooks tab; any notebook can import pages from Uploads.
 - [x] Settings: Recently deleted for folders/documents, asset cache size + clear, palm options
 - [x] Palm guard (Pencil only, wrist guard)
 - [x] Tests (unit + sync with folders/documents), build copies pdf.js, deploy, verify
+
+---
+
+# v1.2 — Writing band (owner request: palm detection "not that good")
+- [x] Band of 3–5 ruled lines; only touches starting inside write; outside dimmed and ignored
+- [x] ▲/▼ step, drag grip, snap to rows, auto-scroll to keep it in view, per-page position
+- [x] Toggle in top bar + Settings (on/off, height)
+- [x] Unit tests (geometry, input filtering); browser check at iPad portrait
+- [ ] Owner: try it on the iPad 2 and report what feels off
