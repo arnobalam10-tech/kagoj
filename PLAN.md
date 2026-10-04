@@ -151,3 +151,48 @@ Notebooks tab; any notebook can import pages from Uploads.
 - [x] Typed text: render under ink, select/move/resize/edit/delete, synced in drawing JSON
 - [x] Unit tests; browser test against the real service
 - [ ] Owner: try with real handwriting on the iPad 2
+
+---
+
+# V2 — Kagoj becomes a personal Notion (typed first, handwriting optional)
+
+Owner decision (2026-10-04): build everything realistic from `notionfeatures.md` for one user, on PC, phone and
+the iPad 2. Collaboration features (sharing, permissions, teamspaces, people, comments, inbox for others,
+publish to web) are dropped. Phone reminders come from a private calendar feed (.ics) the phone subscribes to.
+
+## Architecture
+- **Docs** (new table `docs`): one row per typed page, database, or database row. `parent_id` builds the
+  page tree (no depth limit); `kind` = page | database | row | canvas (a handwritten notebook in the tree);
+  `content` = list of blocks (JSON); `props` = database row values; `schema` = database properties + views;
+  `settings` = fonts, size, width, lock; `revision` guard like pages. Soft delete → Trash.
+- **Blocks**: flat list with indentation depth (`d`), so Tab/Shift+Tab, toggles and nested lists work without a
+  tree; columns hold their own block lists. Rich text = sanitised HTML subset (b, i, u, s, code, a, colour
+  classes, page and date mentions).
+- **Sync**: docs pushed with the revision guard; on conflict a **block-level 3-way merge** (base = last synced
+  content): blocks changed on one side win; blocks changed on both keep both versions.
+- **Bundles loaded on demand** so the iPad 2 starts fast: core (shell, sidebar, store, sync, router), editor,
+  database, calendar, canvas (the existing pen engine), extra (uploads, settings, importer, login, handwriting).
+  All listed in the offline cache manifest.
+- **Fonts**: system fonts + bundled web fonts (woff, loaded only when used).
+
+## Phases
+- [ ] **P0 Restructure**: multi-bundle build + loader; pen engine moved to its own bundle; palm options moved
+      into the floating tool button
+- [ ] **P1 Pages**: `docs` table + sync + merge; sidebar tree (favorites, expand, +, •••, drag to move/nest,
+      trash); top bar (breadcrumbs, star, •••); page icon + cover; block editor (text, H1–H3, bullets,
+      numbers, to-do, toggle + toggle headings, quote, callout, divider, sub-page, simple table, columns,
+      code with highlighting, TOC, breadcrumb, image, file, bookmark, sketch → handwritten page); `/` menu,
+      Markdown shortcuts, selection toolbar (B I U S code link colours), Turn into, block menu, drag to
+      reorder, Tab indent; `@` page/date mentions, `[[` links, backlinks; fonts per page/block, heading/body
+      fonts, size, line spacing, default font; dark mode; search (Ctrl+P); Home (recent, tasks, upcoming)
+- [ ] **P2 Databases**: properties (title, text, number, select, multi-select, status, date, checkbox, URL,
+      email, phone, created/edited time, unique ID, relation, rollup, formula); views Table / Board / List /
+      Gallery / Calendar / Timeline / Chart; filters (AND/OR), sorts, group by, hide properties, column
+      calculations; rows open as side peek / full page; inline + full-page databases; row templates
+- [ ] **P3 Calendar**: Calendar screen (month / week / day) across all dated items, drag to reschedule,
+      ranges, create on tap; reminders (`@remind`, date-property reminders, in-app alerts); private .ics feed
+      for the phone's calendar app (native alerts); read-only Google / iCloud / Outlook calendars via their
+      private iCal links
+- [ ] **P4 Extras**: version history, page templates + template buttons + repeating templates, import
+      (Markdown, CSV) / export (Markdown, HTML, CSV, print to PDF), math (KaTeX), Mermaid (rendered on
+      PC/phone, saved for the iPad), keyboard shortcuts, small text / full width / lock page
