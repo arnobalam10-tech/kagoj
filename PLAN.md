@@ -133,3 +133,11 @@ Notebooks tab; any notebook can import pages from Uploads.
 - [x] Toggle in top bar + Settings (on/off, height)
 - [x] Unit tests (geometry, input filtering); browser check at iPad portrait
 - [ ] Owner: try it on the iPad 2 and report what feels off
+
+---
+
+# v1.3 — Floating tool palette (owner request: bottom bar takes too much space)
+- [x] Replace the bottom tool bar with a draggable round button that opens/closes a panel
+- [x] Panel: tools, colours/sizes, zoom, page navigation, add page; opens toward the free side
+- [x] Position + open state remembered; survives rotation
+- [ ] Owner: try it on the iPad 2

@@ -78,9 +78,11 @@
     this.stage = D.el('div.stage');
     this.msg = D.el('div.stage-msg');
     this.toolbar = new K.Toolbar(this);
-    this.showBtn = D.button({ icon: 'tools', title: 'Show toolbars', cls: 'float-btn' });
+    this.showBtn = D.button({ icon: 'chevron-down', title: 'Show top bar', cls: 'float-btn' });
     D.tap(this.showBtn, function () { self.setToolbarsHidden(false); });
-    D.append(this.root, [this.top, this.stage, this.toolbar.el, this.showBtn]);
+    D.append(this.root, [this.top, this.stage, this.showBtn]);
+    // the floating tool palette lives over the page
+    this.stage.appendChild(this.toolbar.el);
     this.stage.appendChild(this.msg);
     // floating bar while an image is selected
     var del = D.button({ icon: 'trash', label: 'Delete image', cls: 'danger' });
@@ -112,6 +114,7 @@
     K.prefs.set('toolbarsHidden', h);
     this.root.classList.toggle('bars-hidden', h);
     this.engine.resize();
+    this.toolbar.reflow();
   };
 
   P.setReadOnly = function (ro) {
@@ -284,7 +287,7 @@
         { label: 'Fit whole page', icon: 'fit', onTap: function () { self.engine.fit('page'); } },
         { label: 'Fit page width', icon: 'fit', onTap: function () { self.engine.fit('width'); } },
         { label: this.readOnly ? 'Write mode' : 'View mode (no writing)', icon: this.readOnly ? 'pencil' : 'eye', onTap: function () { self.setReadOnly(!self.readOnly); } },
-        { label: 'Hide toolbars', icon: 'tools', onTap: function () { self.setToolbarsHidden(true); } },
+        { label: 'Hide top bar', icon: 'tools', onTap: function () { self.setToolbarsHidden(true); } },
         { label: 'Clear page', icon: 'clear', danger: true, onTap: function () {
           sheets.confirm({ title: 'Clear this page?', message: 'You can undo this.', ok: 'Clear', danger: true }, function (ok) {
             if (ok) { self.engine.clear(); }
@@ -468,7 +471,7 @@
     u.push(D.on(document, 'keyup', function (e) { if (e.keyCode === 32) { self.engine.input.spaceHeld = false; } }));
     this.onResize = function () {
       self.engine.resize();
-      self.toolbar.render();
+      self.toolbar.reflow();
     };
     K.app.on('resize', this.onResize);
     this.onHide = function () { self.flushSave(); };
@@ -530,6 +533,7 @@
     K.Sync.off('remotePage', this.onRemotePage);
     K.Sync.off('conflict', this.onConflict);
     this.pill.destroy();
+    this.toolbar.destroy();
     this.engine.destroy();
   };
 

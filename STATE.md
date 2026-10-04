@@ -3,7 +3,7 @@
 _Last updated: 2026-10-03_
 
 ## Status
-**v1.2 (writing band) on top of v1.1 (Uploads + image placement + palm rejection) is built, tested and pushed; v1 is live at https://kagoj-three.vercel.app.**
+**v1.3 (floating tool palette) and v1.2 (writing band) on top of v1.1 (Uploads + image placement + palm rejection) is built, tested and pushed; v1 is live at https://kagoj-three.vercel.app.**
 Not yet verified: a real login and sync against Supabase (needs the owner's password), and anything on the physical iPad 2.
 
 ## Infrastructure
@@ -40,6 +40,13 @@ Not yet verified: a real login and sync against Supabase (needs the owner's pass
 - Band does not filter the Hand and Select tools; pinch-zoom works with fingers inside the band; toolbar zoom always works.
 - Verified at iPad portrait size: stroke inside the band with a palm resting below → written; stroke outside → ignored; ▼ moves exactly 4 lines. Unit tests for band geometry and input filtering.
 - Bundles: startup 112.6 KB / 120, extra 31.0 KB, CSS 16.0 KB / 20.
+
+## Done — v1.3 (floating tool palette)
+- The bottom tool bar is gone; the page uses the full height.
+- A small round button floats over the page (shows the current tool + colour). Tap: opens a panel with tools, colours/sizes (eraser sizes + mode), zoom (− % +) and pages (‹ n/N › ＋). Tap again: closes. Open/closed state is remembered.
+- Drag the button anywhere (8 px threshold so taps still toggle); position saved as a fraction of the page area so it survives rotation; default bottom-left. The panel opens toward the side with more room and wraps its rows on narrow screens.
+- Palette touches never reach the drawing surface. "Hide toolbars" became "Hide top bar"; the restore button sits top-right.
+- Verified in the browser: open/close, drag to top-right (panel flips to below-left), tool change, drawing, position and tool persist after reload. Bundles: startup 114.5 KB / 120, CSS 17.2 KB / 20.
 
 ## Tests (run inside `npm run build`; a failure blocks deploy)
 - `scripts/test.js`: 24 unit tests (incl. writing band) (geometry, codec incl. page size + images, eraser, history incl. image ops, viewport incl. landscape pages, palm rejection input logic)
