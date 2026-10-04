@@ -3,7 +3,17 @@
 _Last updated: 2026-10-05_
 
 ## Status
-**V2 P3 (calendar) built as 2.2.0.** P0-P3 done. Next: P4 extras (version history, templates, import/export, math, diagrams).
+**V2 complete (2.3.0): P0-P4 done.** Waiting on the owner to log in on each device and try it; bugs reported go into the next round.
+
+### V2 P4 — extras (bundle `more`, loaded with pages)
+- Version history: page menu › Version history lists doc_versions (needs login + network), preview, restore (undoable).
+- Page templates: page menu › Use as a template; sidebar › New page from a template; /Page from template. Template button block (/Template button): copies the blocks indented under it, unchecks to-dos, @dates become today.
+- Repeating database templates (js/cal/repeat.js, bundle `plan`): Templates › Manage › Repeat (daily / weekdays / monthly). Rows get ids hashed from template + date so devices never duplicate; runs after each sync and hourly; catches up at most 7 days.
+- Import (page menu): Markdown files become sub-pages (headings, lists, to-dos, quotes, code fences, mermaid fences, $ math, tables, inline bold/italic/strike/code/links); CSV becomes a database with guessed column types (number/date/checkbox/select/text).
+- Export (page menu): Markdown, HTML, CSV (full-page or inline databases), PDF via print (print CSS hides the app chrome). Old iOS opens the text in a new tab instead of downloading.
+- Math block (KaTeX 0.16, vendored at /vendor/katex, works on iOS 9). Diagram block (Mermaid 11, vendored at /vendor/mermaid, strict security); the drawn SVG is cleaned and saved so the iPad shows it without running Mermaid.
+- Keyboard shortcuts sheet: Ctrl+/ .
+
 
 ### V2 P3 — calendar, reminders, phone feed
 - Calendar screen #/calendar/<month|week|day|agenda>/<date> (bundle `cal`): month grid, week/day hour grid with all-day row and overlap lanes, List (agenda). Tap a day/slot to add (quick-add sheet: title, date, all-day, times, calendar, reminder), drag to another day or time, swipe to change period, current-time line.

@@ -196,7 +196,7 @@
     Docs.update(row.id, { props: props }, { meta: false });
   };
 
-  DB.newRow = function (db, init, template) {
+  DB.newRow = function (db, init, template, id) {
     var props = {}, title = '';
     if (template) {
       props = JSON.parse(JSON.stringify(template.props || {}));
@@ -208,7 +208,7 @@
     });
     if (init) { for (var k in init) { if (Object.prototype.hasOwnProperty.call(init, k)) { if (k === 'title') { title = init[k]; } else { props[k] = init[k]; } } } }
     return Docs.create({
-      parent_id: db.id, kind: 'row', title: title, props: props,
+      id: id || undefined, parent_id: db.id, kind: 'row', title: title, props: props,
       content: template ? JSON.parse(JSON.stringify(template.content || [])).map(function (b) { b.id = Docs.blockId(); return b; }) : [],
       icon: template ? template.icon : null
     });

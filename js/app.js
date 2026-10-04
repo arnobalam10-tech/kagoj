@@ -63,7 +63,7 @@
   app.extrasLoaded = function () { return !window.KAGOJ_BUNDLES || !!K.loaded.extra; };
 
   // Which bundle each screen lives in
-  app.screenBundle = { workspace: 'canvas', dashboard: ['extra', 'canvas'], uploads: 'extra', folder: 'extra', settings: 'extra', login: 'extra', trash: 'extra', page: ['editor', 'db'], calendar: ['editor', 'db', 'plan', 'cal'] };
+  app.screenBundle = { workspace: 'canvas', dashboard: ['extra', 'canvas'], uploads: 'extra', folder: 'extra', settings: 'extra', login: 'extra', trash: 'extra', page: ['editor', 'db', 'more'], calendar: ['editor', 'db', 'plan', 'cal'] };
 
   // Application Cache lets the iOS 9 home-screen app open with no network.
   function watchAppCache() {
@@ -125,7 +125,7 @@
       K.Theme.apply();
       K.Sync.start();
       // databases + reminders load in the background so Home can show Upcoming and alerts fire anywhere
-      setTimeout(function () { if (app.canUseApp()) { app.needAll(['editor', 'db', 'plan']); } }, 2500);
+      setTimeout(function () { if (app.canUseApp()) { app.needAll(['editor', 'db', 'plan', 'more']); } }, 2500);
       if (U.lsGet('kagoj.debug', false)) { app.need('extra', function () { if (K.debug) { K.debug.show(); } }); }
       var splash = document.getElementById('splash');
       if (splash) { D.remove(splash); }

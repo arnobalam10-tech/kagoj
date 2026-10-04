@@ -115,8 +115,11 @@ Promise.all(bundles.map(function (b) { return terser.minify(source(b), TERSER); 
 
   // vendored libraries loaded on demand (PC/phone features)
   var vendor = [
-    ['pdfjs-dist/legacy/build', 'pdfjs', ['pdf.min.js', 'pdf.worker.min.js']]
+    ['pdfjs-dist/legacy/build', 'pdfjs', ['pdf.min.js', 'pdf.worker.min.js']],
+    ['katex/dist', 'katex', ['katex.min.js', 'katex.min.css']],
+    ['mermaid/dist', 'mermaid', ['mermaid.min.js']]
   ];
+  fs.cpSync(path.join(ROOT, 'node_modules', 'katex', 'dist', 'fonts'), path.join(DIST, 'vendor', 'katex', 'fonts'), { recursive: true });
   vendor.forEach(function (v) {
     var src = path.join(ROOT, 'node_modules', v[0]), dst = path.join(DIST, 'vendor', v[1]);
     fs.mkdirSync(dst, { recursive: true });

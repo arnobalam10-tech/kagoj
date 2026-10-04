@@ -362,6 +362,9 @@
             sheets.actionSheet({ title: Docs.titleOf(t), items: [
               { label: 'Edit', icon: 'edit', onTap: function () { K.shell.openDoc(t); } },
               { label: db.schema.defTpl === t.id ? 'Stop using as default' : 'Set as default', icon: 'check', onTap: function () { db.schema.defTpl = db.schema.defTpl === t.id ? null : t.id; DB.saveSchema(db); } },
+              { label: 'Repeat…' + (t.settings && t.settings.repeat ? ' (' + t.settings.repeat.every + ')' : ''), icon: 'refresh', onTap: function () {
+                K.app.need('plan', function () { if (K.Repeat) { K.Repeat.edit(db, t); } });
+              } },
               { label: 'Delete', icon: 'trash', danger: true, onTap: function () { Docs.remove(t.id); if (db.schema.defTpl === t.id) { db.schema.defTpl = null; DB.saveSchema(db); } } }
             ] });
           } };

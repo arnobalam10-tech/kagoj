@@ -1,0 +1,41 @@
+/* ---------- extras: history, template button, math, diagrams, print ---------- */
+.vh-row { display: -webkit-box; display: -webkit-flex; display: flex; }
+.vh-when { width: 150px; -webkit-flex-shrink: 0; flex-shrink: 0; color: #7A766D; font-size: 14px; }
+.vh-title { -webkit-box-flex: 1; -webkit-flex: 1; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vh-preview { white-space: pre-wrap; font: 14px/1.5 -apple-system, "Helvetica Neue", Arial, sans-serif; max-height: 60vh; overflow-y: auto; -webkit-overflow-scrolling: touch; margin: 0; background: #FBFAF7; border: 1px solid #ECE9E2; border-radius: 8px; padding: 12px; }
+.tbtn-box { padding: 2px 0; }
+.tbtn { -webkit-appearance: none; border: 1px solid #DAD7CF; background: #fff; border-radius: 6px; padding: 5px 12px 5px 8px; font-size: 14.5px; color: inherit; cursor: pointer; }
+.tbtn .icon { width: 15px; height: 15px; margin: -2px 5px 0 0; }
+.tbtn:hover { background: #F7F6F2; }
+.tbtn-edit { -webkit-appearance: none; border: 0; background: transparent; padding: 4px 6px; color: #B5B1A8; cursor: pointer; vertical-align: middle; }
+.tbtn-edit .icon { width: 15px; height: 15px; }
+.tbtn-hint { font-size: 12.5px; color: #B5B1A8; margin-left: 4px; }
+.has-touch .tbtn-hint { display: none; }
+.math-box, .mm-box { position: relative; border-radius: 6px; }
+.math-out { text-align: center; padding: 10px 6px; cursor: pointer; overflow-x: auto; -webkit-overflow-scrolling: touch; min-height: 24px; border-radius: 6px; }
+.math-out:hover, .mm-out:hover { background: rgba(55,53,47,0.04); }
+.math-out.ph, .mm-out:empty { color: #B5B1A8; font-size: 15px; }
+.math-src, .mm-src { display: none; width: 100%; border: 1px solid #DAD7CF; border-radius: 6px; padding: 8px 10px; font: 14px/1.45 Menlo, Consolas, monospace; background: #FBFAF7; color: inherit; outline: none; resize: vertical; }
+.math-box.editing .math-src, .mm-box.editing .mm-src { display: block; }
+.mm-out { text-align: center; padding: 8px 0; cursor: pointer; overflow-x: auto; -webkit-overflow-scrolling: touch; color: #9B9A97; font-size: 14px; }
+.mm-out svg { max-width: 100%; height: auto; }
+.mm-err { color: #C0392B; font-size: 13px; }
+.rep-days { margin: 8px 0; }
+.rep-days .seg { border: 1px solid #DAD7CF; border-radius: 6px; margin: 0 4px 4px 0; }
+.kb-table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.kb-table td { padding: 7px 4px; border-bottom: 1px solid #F0EDE6; }
+.kb-table td:last-child { text-align: right; }
+kbd { font: 12.5px Menlo, Consolas, monospace; background: #F1EFEA; border: 1px solid #DAD7CF; border-bottom-width: 2px; border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+.dark .vh-preview, .dark .math-src, .dark .mm-src { background: #262626; border-color: #3A3833; }
+.dark .tbtn { background: #262626; border-color: #3A3833; }
+.dark kbd { background: #2A2A2A; border-color: #3A3833; }
+.dark .kb-table td { border-color: #34322E; }
+
+@media print {
+  .sidebar, .sb-over, .topbar, .blk-gut, .page-adds, .add-link, .cover-btn, .backlinks, .page-tail, .dbv-tools, .dbv-tabs .add, .row-open, .row-more, .pill, .status-pill, .tbtn-edit, .tbtn-hint, .toast, .peek { display: none !important; }
+  html, body, .app, .screen, .doc-scroll { height: auto !important; overflow: visible !important; position: static !important; background: #fff !important; }
+  .main, .content { margin: 0 !important; left: 0 !important; }
+  .page { max-width: none !important; padding: 0 !important; }
+  .blk { break-inside: avoid; page-break-inside: avoid; }
+  .tbl-wrap, .board, .cal-wrap { overflow: visible !important; }
+}

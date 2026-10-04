@@ -404,7 +404,7 @@
     act('copy', 'Duplicate', function () { self.flush(); var c = Docs.duplicate(doc.id); if (c) { K.shell.openDoc(c); } });
     act('folder', 'Move to…', function () { K.shell.moveTo(doc); });
     act('plus', 'Add a sub-page', function () { self.flush(); K.shell.newPage(doc.id); });
-    (K.pageMenuExtras || []).forEach(function (x) { act(x.icon, x.label, function () { self.flush(); x.run(self); }); });
+    (K.pageMenuExtras || []).forEach(function (x) { if (!x.when || x.when(self)) { act(x.icon, x.label, function () { self.flush(); x.run(self); }); } });
     act('trash', 'Delete', function () { self.flush(); K.shell.remove(doc); }, true);
     body.appendChild(acts);
     var m = sheets.modal({ title: 'Page', body: body, cls: 'sheet-page-menu', actions: [{ label: 'Done', primary: true }] });

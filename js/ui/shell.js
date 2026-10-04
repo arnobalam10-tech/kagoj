@@ -330,8 +330,11 @@
       D.tap(add, function () { Shell.newPage(null); });
       var addHw = D.el('button.sb-item.sb-add', { type: 'button' }, [D.icon('pen'), D.el('span', { text: 'Add a handwritten page' })]);
       D.tap(addHw, function () { Shell.newCanvas(null); });
+      var addTpl = D.el('button.sb-item.sb-add', { type: 'button' }, [D.icon('page-add'), D.el('span', { text: 'New page from a template' })]);
+      D.tap(addTpl, function () { K.app.needAll(['editor', 'db', 'more'], function (err) { if (!err && K.templatePicker) { Shell.close(); K.templatePicker(null); } }); });
       scroll.appendChild(add);
       scroll.appendChild(addHw);
+      scroll.appendChild(addTpl);
     }
     scroll.appendChild(D.el('div.sb-gap'));
     scroll.appendChild(navItem('trash', 'Trash', '#/trash'));

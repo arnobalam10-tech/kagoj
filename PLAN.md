@@ -193,6 +193,6 @@ publish to web) are dropped. Phone reminders come from a private calendar feed (
       ranges, create on tap; reminders (`@remind`, date-property reminders, in-app alerts); private .ics feed
       for the phone's calendar app (native alerts); read-only Google / iCloud / Outlook calendars via their
       private iCal links
-- [ ] **P4 Extras**: version history, page templates + template buttons + repeating templates, import
+- [x] **P4 Extras**: version history, page templates + template buttons + repeating templates, import
       (Markdown, CSV) / export (Markdown, HTML, CSV, print to PDF), math (KaTeX), Mermaid (rendered on
       PC/phone, saved for the iPad), keyboard shortcuts, small text / full width / lock page
