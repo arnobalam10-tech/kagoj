@@ -79,7 +79,7 @@
         var dv = DB.value(db, row, p);
         var over = false;
         var today0 = new Date(); today0.setHours(0, 0, 0, 0);
-        if (dv && (dv.e || dv.d) < today0.getTime() && !isDone(db, row)) { over = true; }
+        if (dv && (dv.e || dv.d) < today0.getTime() && !isDone(db, row) && !(db.schema && db.schema.classes)) { over = true; }
         return D.el('span.cell-date' + (over ? '.overdue' : ''), null, [D.el('span', { text: t }), raw.r !== undefined ? D.icon('bell', 'mini') : null]);
     }
     var s = DB.text(db, row, p);

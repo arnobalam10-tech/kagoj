@@ -5,6 +5,13 @@ _Last updated: 2026-10-05_
 ## Status
 **V2 complete (2.4.0): P0-P4 done.**
 
+### 2.5.0 personal setup (owner request)
+- Home rebuilt: date + random quirky greeting by time/day; Next up card (earliest timed, not-done item in the next 12 h: "You have INB372 at 11:20 AM next", or "free for the next 12 hours"); after-class attendance card (class days, once the day's last class has started: Present/Absent per class, Save); quick task (title, date, time; goes to the database with schema.tasks, reminder at the time); every section's top pages as cover tiles. Cards live in js/cal/homecards.js (bundle plan).
+- Class databases: schema.classes = {course}; props Date (with end + 10-min reminder), Day (formula), Attendance (select Present/Absent), Week, Notes. Attendance summary block (attsum, ref = class db): held / present / absent / % with colour grade (>=80 green, >=60 amber, else red), bar, next class.
+- Owner data written directly via SQL (not by logging in): University section with FIN245, INB372, LAW200 pages (Attendance page = summary + inline class db; My marks page = inline marks db: Type, Date, Weight, Marks, Out of, Score formula, Status; rows Quiz 1, Quiz 2, Mid, Assignment, Presentation, Final). Classes every Thu + Sat 2026-09-24 .. 2026-12-31 (FIN245 9:40-11:10, INB372 11:20-12:50, LAW200 16:20-17:50; end times assumed 90 min). Past attendance filled (24/26 Sep absent all; 1 Oct present all; 3 Oct present INB + LAW, absent FIN). Tasks database (schema.tasks) in Personal.
+- Date ranges on one day show as "Sep 24, 2026 9:40 AM – 11:10 AM"; class databases are never shown as overdue.
+- Fixed: attsum class token with a space.
+
 ### 2.4.0 sidebar sections
 - The sidebar "Pages" list is replaced by sections like Notion (Personal, University, Life ...). A section is a top-level doc of kind 'section' (migration kagoj_v2_sections widens docs_kind_check); pages live inside it as children, so sync/trash/move work unchanged. Docs.all() and search leave sections out; Docs.sections(), Docs.sectionOf().
 - First run makes "Personal" (id derived from the user id, so every device makes the same one) and moves all top-level pages into the first section; this also catches pages made at the top level later.

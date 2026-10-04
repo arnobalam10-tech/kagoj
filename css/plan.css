@@ -5,3 +5,36 @@
 .rem-actions { text-align: right; margin-top: 8px; }
 .rem-actions .small-btn { height: 30px; margin-left: 6px; }
 .dark .rem-banner { background: #2A2A2A; color: #E8E6E1; }
+
+/* home cards */
+.hc-card { border: 1px solid #E6E3DB; border-radius: 14px; background: #fff; padding: 14px 16px; margin-bottom: 14px; }
+.hc-kicker { font-size: 12px; text-transform: uppercase; letter-spacing: 0.7px; color: #9B968C; margin-bottom: 6px; }
+.hc-big { font-size: 19px; line-height: 1.35; }
+.hc-big b { font-weight: 700; }
+.hc-small { font-size: 13.5px; color: #8A857B; margin-top: 4px; }
+.hc-next { cursor: pointer; border-left: 4px solid #4A7FC1; }
+.hc-next.soon { border-left-color: #E08A3C; background: #FFF9F2; }
+.hc-next.free { border-left-color: #4E9A6A; background: #F4FAF5; cursor: default; }
+.hc-att { border-left: 4px solid #8E6BBF; }
+.hc-att.done { border-left-color: #4E9A6A; display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center; }
+.hc-att.done .hc-big { -webkit-box-flex: 1; -webkit-flex: 1; flex: 1; font-size: 16px; }
+.att-row { display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center; padding: 8px 0; border-top: 1px solid #F0EDE6; }
+.att-row:first-of-type { margin-top: 10px; }
+.att-name { -webkit-box-flex: 1; -webkit-flex: 1; flex: 1; font-size: 15px; }
+.att-name span { color: #8A857B; font-size: 13px; }
+.att-btn { -webkit-appearance: none; border: 1px solid #DAD7CF; background: #fff; color: #6E6A61; height: 34px; padding: 0 14px; font-size: 14px; cursor: pointer; }
+.att-btn.p { border-radius: 8px 0 0 8px; }
+.att-btn.a { border-radius: 0 8px 8px 0; border-left: 0; }
+.att-btn.p.on { background: #4E9A6A; border-color: #4E9A6A; color: #fff; }
+.att-btn.a.on { background: #D2584A; border-color: #D2584A; color: #fff; }
+.att-save { margin-top: 12px; }
+.hc-task .text-input { height: 42px; font-size: 16px; margin-bottom: 8px; }
+.task-when { display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center; }
+.task-when .text-input { margin: 0 8px 0 0; -webkit-box-flex: 1; -webkit-flex: 1; flex: 1; min-width: 0; }
+.task-when .small-btn { height: 42px; padding: 0 18px; }
+.dark .hc-card { background: #262626; border-color: #3A3833; }
+.dark .hc-next.soon { background: #33291F; }
+.dark .hc-next.free { background: #1F2B22; }
+.dark .att-row { border-color: #34322E; }
+.dark .att-btn { background: #2A2A2A; border-color: #3A3833; color: #D6D3CC; }
+.hc-card .small-btn.primary { background: #2F5DA8; border-color: #2F5DA8; color: #fff; border-radius: 8px; }

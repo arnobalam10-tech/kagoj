@@ -240,27 +240,25 @@ button { font: inherit; color: inherit; }
 /* home */
 .home-body { max-width: 860px; margin: 0 auto; padding: 18px 28px 60px; }
 .phone .home-body { padding: 10px 14px 60px; }
-.home-hello { font-family: Georgia, "Times New Roman", serif; font-weight: normal; font-size: 30px; margin: 10px 0 18px; }
-.home-actions { overflow: hidden; margin: 0 -4px 6px; }
-.home-action { -webkit-appearance: none; float: left; margin: 0 4px 8px; height: 40px; padding: 0 14px; border: 1px solid #E2DED5; border-radius: 10px; background: #FFFFFF; color: #3A3832; font-size: 14.5px; cursor: pointer; }
-.home-action .icon { width: 18px; height: 18px; margin: -2px 6px 0 0; color: #6E6A61; }
-.home-cards { overflow: hidden; margin: 0 -6px; }
-.home-card { -webkit-appearance: none; float: left; width: 180px; height: 116px; margin: 0 6px 12px; padding: 12px; border: 1px solid #E6E3DB; border-radius: 12px; background: #FFFFFF; text-align: left; cursor: pointer; color: inherit; overflow: hidden; }
-.phone .home-card { width: -webkit-calc(50% - 12px); width: calc(50% - 12px); }
-.hc-title { display: block; font-weight: 600; font-size: 15px; margin-top: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hc-sub { display: block; font-size: 12.5px; color: #8A857B; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-date { color: #9B968C; font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 14px; }
+.home-hello { font-family: Georgia, "Times New Roman", serif; font-weight: normal; font-size: 30px; line-height: 1.25; margin: 6px 0 18px; }
+.phone .home-hello { font-size: 25px; }
+.hc-loading { color: #B5B1A8; font-size: 14px; margin-bottom: 18px; }
+.home-tiles { overflow: hidden; margin: 0 -7px 8px; }
+.home-tile { -webkit-appearance: none; float: left; width: -webkit-calc(33.333% - 14px); width: calc(33.333% - 14px); margin: 0 7px 14px; padding: 0; border: 1px solid #E6E3DB; border-radius: 12px; background: #fff; text-align: left; cursor: pointer; color: inherit; overflow: hidden; -webkit-transition: -webkit-transform 120ms; transition: transform 120ms; }
+.home-tile:hover { -webkit-transform: translateY(-2px); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+.phone .home-tile { width: -webkit-calc(50% - 14px); width: calc(50% - 14px); }
+.ht-cover { height: 70px; background-size: cover; background-position: center; }
+.ht-body { position: relative; padding: 18px 12px 12px; }
+.ht-ico { position: absolute; top: -18px; left: 10px; font-size: 26px; line-height: 32px; }
+.ht-ico .doc-ico { width: 32px; height: 32px; font-size: 26px; line-height: 32px; text-align: left; }
+.ht-ico .doc-ico .icon { width: 24px; height: 24px; color: #6E6A61; }
+.ht-title { display: block; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ht-sub { display: block; font-size: 12.5px; color: #8A857B; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .doc-ico { display: inline-block; width: 22px; text-align: center; color: #8A857B; vertical-align: middle; -webkit-flex-shrink: 0; flex-shrink: 0; }
 .doc-ico .icon { width: 18px; height: 18px; }
 .doc-ico.big { width: 32px; height: 32px; font-size: 26px; line-height: 32px; text-align: left; }
 .doc-ico.big .icon { width: 26px; height: 26px; }
-.nb-swatch { border-radius: 4px 7px 7px 4px; width: 24px !important; }
-.home-list { border: 1px solid #E6E3DB; border-radius: 12px; background: #FFFFFF; overflow: hidden; }
-.home-li { -webkit-appearance: none; border: 0; background: transparent; -webkit-box-flex: 1; -webkit-flex: 1; flex: 1; min-height: 44px; width: 100%; padding: 8px 14px; text-align: left; font-size: 15px; color: inherit; cursor: pointer; display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center; }
-.home-list > * + * { border-top: 1px solid #F0EDE6; }
-.home-todo { display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center; padding-left: 14px; }
-.home-check { -webkit-appearance: none; width: 20px; height: 20px; border: 1.5px solid #A39E94; border-radius: 4px; background: transparent; -webkit-flex-shrink: 0; flex-shrink: 0; cursor: pointer; }
-.home-from, .home-date { color: #8A857B; font-size: 13px; margin-left: auto; padding-left: 12px; white-space: nowrap; }
-.home-date { margin: 0 12px 0 0; padding: 0; min-width: 90px; }
 .home-empty { color: #6E6A61; line-height: 1.5; margin-top: 24px; }
 
 /* search */
@@ -279,16 +277,15 @@ button { font: inherit; color: inherit; }
 body.dark { background: #1C1C1C; color: #E8E6E1; }
 .dark .shell, .dark .dash-scroll, .dark .screen { background: #1C1C1C; }
 .dark .sidebar { background: #232323; border-color: #34322E; }
-.dark .sb-item, .dark .tt, .dark .home-action { color: #D6D3CC; }
+.dark .sb-item, .dark .tt { color: #D6D3CC; }
 .dark .sb-item.active, .dark .tree-row.active, .dark .sb-item.pressed { background: rgba(255,255,255,0.07); }
 .dark .sb-foot { border-color: #34322E; }
-.dark .sb-new, .dark .home-action, .dark .home-card, .dark .home-list, .dark .search-input, .dark .text-input, .dark .search, .dark .small-btn, .dark .pill, .dark .seg { background: #262626; border-color: #3A3833; color: #E8E6E1; }
+.dark .sb-new, .dark .home-tile, .dark .search-input, .dark .text-input, .dark .search, .dark .small-btn, .dark .pill, .dark .seg { background: #262626; border-color: #3A3833; color: #E8E6E1; }
 .dark .topbar { background: #1C1C1C; border-color: #34322E; }
 .dark .btn { color: #E8E6E1; }
 .dark .btn.primary { color: #fff; }
 .dark .sheet, .dark .popover, .dark .set-card { background: #2A2A2A; color: #E8E6E1; border-color: #3A3833; }
 .dark .action-item, .dark .pick-row, .dark .search-row { color: #E8E6E1; border-color: #3A3833; }
-.dark .home-list > * + * { border-color: #34322E; }
 .dark .seg.selected { background: #2F5DA8; color: #fff; }
 .dark .set-row { border-color: #3A3833; }
 .dark .card-title, .dark .hc-title { color: #E8E6E1; }

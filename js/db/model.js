@@ -166,7 +166,11 @@
     if (p.type === 'date' && v) {
       var raw = DB.raw(db, row, p);
       var s = DB.fmtDate(v.d, v.t);
-      if (v.e) { s += ' → ' + DB.fmtDate(v.e, /T/.test(raw.e || '')); }
+      if (v.e) {
+        var sameDay = new Date(v.d).toDateString() === new Date(v.e).toDateString();
+        if (sameDay && v.t) { var full = DB.fmtDate(v.e, true); s += ' – ' + full.substr(full.lastIndexOf(' ', full.length - 4) + 1); }
+        else if (!sameDay) { s += ' → ' + DB.fmtDate(v.e, /T/.test(raw.e || '')); }
+      }
       return s;
     }
     if (p.type === 'rollup' && p.fn === 'pct_checked' && typeof v === 'number') { return v + '%'; }

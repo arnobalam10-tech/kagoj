@@ -315,7 +315,18 @@
       var id = uid && /^[0-9a-f]{8}-/.test(uid) ? '5ec7104e' + uid.substr(8) : undefined;
       var existing = id ? K.Docs.get(id) : null;
       if (existing) { K.Docs.update(id, { deleted_at: null }, { meta: true }); }
-      else { K.Docs.create({ id: id, kind: 'section', title: 'Personal', content: [] }); }
+      else { K.Docs.create({ id: id, kind: 'section', title: 'Personal', content: [], settings: { auto: true } }); }
+      secs = K.Docs.sections();
+    }
+    // a device that was logged out made its own "Personal": fold it into the shared one
+    var uid2 = K.sb && K.sb.userId && K.sb.userId();
+    var shared = uid2 && /^[0-9a-f]{8}-/.test(uid2) ? K.Docs.get('5ec7104e' + uid2.substr(8)) : null;
+    if (shared && !shared.deleted_at) {
+      secs.forEach(function (s) {
+        if (s.id === shared.id || !(s.settings && s.settings.auto)) { return; }
+        K.Docs.children(s.id).forEach(function (c) { K.Docs.update(c.id, { parent_id: shared.id, position: K.Docs.positionAt(shared.id, null) }, { meta: true }); });
+        K.Docs.remove(s.id);
+      });
       secs = K.Docs.sections();
     }
     var first = secs[0];

@@ -119,6 +119,52 @@
     return host;
   };
 
+  // ---------- attendance summary (for class databases) ----------
+
+  V.attsum = function (b) {
+    var host = D.el('div.attsum');
+    host.setAttribute('contenteditable', 'false');
+    function draw() {
+      var db = Docs.get(b.ref);
+      D.empty(host);
+      if (!db || !Docs.isLive(db) || !db.schema) { host.appendChild(D.el('p.empty', { text: 'The attendance database is not on this device yet.' })); return; }
+      var dp = DB.firstOf(db, ['date']), ap = DB.propByName(db, 'Attendance');
+      var now = Date.now(), held = 0, pres = 0, abs = 0, next = null;
+      DB.rows(db).forEach(function (r) {
+        var v = dp ? DB.value(db, r, dp) : null;
+        if (!v || !v.d) { return; }
+        var a = ap ? DB.value(db, r, ap) : null;
+        if (v.d <= now) { held++; if (a === 'Present') { pres++; } else if (a === 'Absent') { abs++; } }
+        else if (!next || v.d < next) { next = v.d; }
+      });
+      var marked = pres + abs, pct = marked ? Math.round(pres / marked * 100) : 0;
+      var grade = !marked ? 'none' : pct >= 80 ? 'good' : pct >= 60 ? 'ok' : 'bad';
+      function tileEl(num, label, cls) { return D.el('div.as-tile' + (cls ? '.' + cls : ''), null, [D.el('div.as-num', { text: String(num) }), D.el('div.as-label', { text: label })]); }
+      var tiles = D.el('div.as-tiles', null, [
+        tileEl(held, 'Classes held', ''),
+        tileEl(pres, 'Present', 'present'),
+        tileEl(abs, 'Absent', 'absent'),
+        tileEl(marked ? pct + '%' : '–', 'Attendance', 'pct.' + grade)
+      ]);
+      host.appendChild(tiles);
+      var bar = D.el('div.as-bar', null, [D.el('span.as-p', { style: { width: (held ? pres / held * 100 : 0) + '%' } }), D.el('span.as-a', { style: { width: (held ? abs / held * 100 : 0) + '%' } })]);
+      host.appendChild(bar);
+      var notes = [];
+      if (held - marked > 0) { notes.push((held - marked) + ' not marked yet'); }
+      if (next) { notes.push('Next class: ' + K.dateLabel(K.isoDay(new Date(next)) + 'T' + ('0' + new Date(next).getHours()).slice(-2) + ':' + ('0' + new Date(next).getMinutes()).slice(-2))); }
+      if (marked && pct < 80) { notes.push(pct < 60 ? 'Careful: attendance is low' : 'Try to keep it above 80%'); }
+      if (notes.length) { host.appendChild(D.el('div.as-note', { text: notes.join('  ·  ') })); }
+    }
+    draw();
+    var redraw = U.debounce(function () {
+      if (!document.body.contains(host)) { Docs.off('change', onCh); return; }
+      draw();
+    }, 250);
+    function onCh(id) { var d = Docs.get(id); if (d && (d.id === b.ref || d.parent_id === b.ref)) { redraw(); } }
+    Docs.on('change', onCh);
+    return host;
+  };
+
   function insertDb(ed, id, b) {
     var cur = ed.block(id);
     b.d = cur ? cur.d || 0 : 0;
