@@ -151,7 +151,7 @@
     ]));
 
     body.appendChild(section('Writing', [
-      row('Reopen last notebook on launch', toggle(p.reopenLast, function (v) { K.prefs.set('reopenLast', v); })),
+      row('Open the last page or notebook on launch (instead of Home)', toggle(p.reopenLast, function (v) { K.prefs.set('reopenLast', v); })),
       row('Default zoom', segmented([['auto', 'Auto'], ['width', 'Fit width'], ['page', 'Fit page']], p.fitMode, function (v) { K.prefs.set('fitMode', v); }),
         'Auto: whole page in portrait, page width in landscape')
     ]));

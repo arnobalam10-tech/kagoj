@@ -129,7 +129,9 @@
       if (U.lsGet('kagoj.debug', false)) { app.need('extra', function () { if (K.debug) { K.debug.show(); } }); }
       var splash = document.getElementById('splash');
       if (splash) { D.remove(splash); }
-      if (!location.hash || location.hash === '#' || location.hash === '#/') {
+      // open on Home; the home-screen app (iPad) ignores the address it was left on
+      var homeScreenApp = !!window.navigator.standalone;
+      if (!location.hash || location.hash === '#' || location.hash === '#/' || (homeScreenApp && !K.prefs.get('reopenLast') && location.hash !== '#/login')) {
         var h = app.startHash(false);
         if (window.history && window.history.replaceState) { window.history.replaceState(null, '', h); }
         else { location.hash = h; }

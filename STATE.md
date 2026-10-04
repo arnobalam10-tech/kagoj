@@ -5,6 +5,9 @@ _Last updated: 2026-10-05_
 ## Status
 **V2 complete (2.4.0): P0-P4 done.**
 
+### 2.5.1
+- Launch opens Home. reopenLast now defaults to off (Settings: "Open the last page or notebook on launch"); the iOS home-screen app (navigator.standalone) also ignores the address it was left on unless that setting is on.
+
 ### 2.5.0 personal setup (owner request)
 - Home rebuilt: date + random quirky greeting by time/day; Next up card (earliest timed, not-done item in the next 12 h: "You have INB372 at 11:20 AM next", or "free for the next 12 hours"); after-class attendance card (class days, once the day's last class has started: Present/Absent per class, Save); quick task (title, date, time; goes to the database with schema.tasks, reminder at the time); every section's top pages as cover tiles. Cards live in js/cal/homecards.js (bundle plan).
 - Class databases: schema.classes = {course}; props Date (with end + 10-min reminder), Day (formula), Attendance (select Present/Absent), Week, Notes. Attendance summary block (attsum, ref = class db): held / present / absent / % with colour grade (>=80 green, >=60 amber, else red), bar, next class.

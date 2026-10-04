@@ -10,7 +10,7 @@
     pen: { color: '#1F1F1F', size: 3.5 },
     highlighter: { color: '#FFE34D', size: 20 },
     eraser: { size: 18, mode: 'partial' },
-    reopenLast: true,
+    reopenLast: false,
     fitMode: 'auto',
     toolbarsHidden: false,
     pencilOnly: false,
