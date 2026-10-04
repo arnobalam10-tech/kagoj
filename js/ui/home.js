@@ -126,17 +126,21 @@
     }
   }
 
+  var upHooked = false;
   screen.mount = function (root) {
     var top = D.el('header.topbar.doc-top', null, [K.shell.menuButton(), D.el('div.top-title', { text: 'Home' }), D.el('div.spacer')]);
     var body = D.el('div.home-body');
     D.append(root, [top, D.el('div.doc-scroll.scrolls', null, body)]);
     st = { body: body, onChange: U.debounce(render, 250) };
     K.Docs.on('change', st.onChange);
+    K.app.on('bundle', st.onChange);
+    if (K.Upcoming && !upHooked) { upHooked = true; K.Upcoming.onChange(function () { if (st) { st.onChange(); } }); }
     render();
   };
   screen.unmount = function () {
     if (!st) { return; }
     K.Docs.off('change', st.onChange);
+    K.app.off('bundle', st.onChange);
     st.onChange.cancel();
     st = null;
   };

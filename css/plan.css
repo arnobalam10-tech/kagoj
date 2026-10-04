@@ -1,0 +1,7 @@
+/* reminder banner */
+.rem-banner { position: fixed; top: 12px; right: 12px; z-index: 300; width: 320px; max-width: -webkit-calc(100% - 24px); max-width: calc(100% - 24px); background: #fff; border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,0.22); padding: 12px 14px; border-left: 4px solid #D2584A; }
+.rem-title { font-weight: 600; font-size: 15px; }
+.rem-sub { font-size: 13px; color: #7A766D; margin-top: 2px; }
+.rem-actions { text-align: right; margin-top: 8px; }
+.rem-actions .small-btn { height: 30px; margin-left: 6px; }
+.dark .rem-banner { background: #2A2A2A; color: #E8E6E1; }

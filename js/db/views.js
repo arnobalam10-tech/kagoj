@@ -147,14 +147,14 @@
     }
     function end(p) {
       clearTimeout(timer);
-      var was = dragging;
+      var was = dragging, offY = ghost ? ghost.offY : 0;
       dragging = false; start = null;
       if (ghost) { D.remove(ghost); ghost = null; }
       el.classList.remove('dragging');
       if (lastTarget) { lastTarget.classList.remove('drop-on'); }
       var t = was ? target(p) : null;
       lastTarget = null;
-      if (was && t) { opts.drop(t.getAttribute('data-drop'), t); }
+      if (was && t) { opts.drop(t.getAttribute('data-drop'), t, { x: p.x, y: p.y, offY: offY }); }
       return was;
     }
     D.on(el, 'mousedown', function (e) {
@@ -190,6 +190,8 @@
     D.on(el, 'touchcancel', function () { clearTimeout(timer); if (dragging) { end({ x: -1, y: -1 }); } start = null; });
   }
   function justDragged(el) { return el.dragJustEnded && Date.now() - el.dragJustEnded < 400; }
+  K.dbDraggable = draggable;
+  K.dbJustDragged = justDragged;
 
   // ---------- the view ----------
 

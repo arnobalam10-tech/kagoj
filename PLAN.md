@@ -189,7 +189,7 @@ publish to web) are dropped. Phone reminders come from a private calendar feed (
       email, phone, created/edited time, unique ID, relation, rollup, formula); views Table / Board / List /
       Gallery / Calendar / Timeline / Chart; filters (AND/OR), sorts, group by, hide properties, column
       calculations; rows open as side peek / full page; inline + full-page databases; row templates
-- [ ] **P3 Calendar**: Calendar screen (month / week / day) across all dated items, drag to reschedule,
+- [x] **P3 Calendar**: Calendar screen (month / week / day) across all dated items, drag to reschedule,
       ranges, create on tap; reminders (`@remind`, date-property reminders, in-app alerts); private .ics feed
       for the phone's calendar app (native alerts); read-only Google / iCloud / Outlook calendars via their
       private iCal links

@@ -3,7 +3,16 @@
 _Last updated: 2026-10-05_
 
 ## Status
-**V2 P2 (databases) built as 2.1.0.** P0 + P1 + P2 done. Next: P3 calendar + reminders + .ics feed, P4 extras (PLAN.md V2).
+**V2 P3 (calendar) built as 2.2.0.** P0-P3 done. Next: P4 extras (version history, templates, import/export, math, diagrams).
+
+### V2 P3 — calendar, reminders, phone feed
+- Calendar screen #/calendar/<month|week|day|agenda>/<date> (bundle `cal`): month grid, week/day hour grid with all-day row and overlap lanes, List (agenda). Tap a day/slot to add (quick-add sheet: title, date, all-day, times, calendar, reminder), drag to another day or time, swipe to change period, current-time line.
+- Sources (js/cal/items.js, bundle `plan`, loaded in the background 2.5 s after start together with editor + db): every database with a Date property, @date mentions in pages, subscribed iCal calendars. Show/hide per calendar. New events go into the last-used database, else one named Calendar/Events, else a new "Calendar" database.
+- Reminders: date-property reminder offset or @remind mentions; in-app banner (and a system notification when allowed and the tab is hidden) while Kagoj is open; checked every 30 s.
+- Phone: private feed link (Edge Function kagoj-ics, verify_jwt off, key = 48-hex user_settings.feed_token; read-only; VALARM alerts; all-day reminders at 9:00). Create/copy/reset in Calendar settings. Verified end to end with temporary data (removed).
+- External calendars: Edge Function kagoj-ical (JWT + authenticated) fetches an iCal URL; parser handles folding, escapes, UTC/floating times, all-day, EXDATE, RRULE DAILY/WEEKLY(BYDAY)/MONTHLY/YEARLY with COUNT/UNTIL/INTERVAL. Cached in localStorage, refreshed every 3 h. Subscriptions are stored in user_settings.data.cals (follow the user).
+- Home shows Upcoming (next 7 days).
+
 
 ### V2 P2 — databases
 - Files: js/db/formula.js (formula language), model.js (K.DB: schema, values, filters, sorts, groups, calculations, dated items), editors.js (value pickers, property settings, filters, sorts, view settings), views.js (K.DbView), peek.js (row properties, side peek, inline block + slash items), css/db.css. Bundle `db` (101 KB of 110), loaded with `editor` for the page screen.
