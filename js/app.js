@@ -63,7 +63,7 @@
   app.extrasLoaded = function () { return !window.KAGOJ_BUNDLES || !!K.loaded.extra; };
 
   // Which bundle each screen lives in
-  app.screenBundle = { workspace: 'canvas', dashboard: ['extra', 'canvas'], uploads: 'extra', folder: 'extra', settings: 'extra', login: 'extra', trash: 'extra', page: 'editor', calendar: 'cal' };
+  app.screenBundle = { workspace: 'canvas', dashboard: ['extra', 'canvas'], uploads: 'extra', folder: 'extra', settings: 'extra', login: 'extra', trash: 'extra', page: ['editor', 'db'], calendar: ['editor', 'db', 'cal'] };
 
   // Application Cache lets the iOS 9 home-screen app open with no network.
   function watchAppCache() {

@@ -71,7 +71,7 @@
   };
 
   Shell.newPage = function (parentId, kind) {
-    var d = K.Docs.create({ parent_id: parentId || null, kind: kind || 'page' });
+    var d = K.Docs.create({ parent_id: parentId || null, kind: kind || 'page', content: kind === 'database' ? [] : undefined });
     if (parentId) { var o = K.prefs.get('sbOpen'); o[parentId] = true; K.prefs.set('sbOpen', o); }
     Shell.openDoc(d);
     return d;

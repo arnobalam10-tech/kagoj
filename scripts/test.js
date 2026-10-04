@@ -327,5 +327,134 @@ test('page <-> screen conversion', function () {
   near(p.x, 500); near(p.y, 700);
 });
 
+console.log('formula');
+vm.runInContext(fs.readFileSync(path.join(ROOT, 'js/db/formula.js'), 'utf8'), ctx, { filename: 'js/db/formula.js' });
+function fx(src, props) {
+  var r = K.Formula.run(src, function (n) { if (!props || !(n in props)) { throw new Error('No property ' + n); } return props[n]; });
+  if (r.err) { throw new Error(r.err); }
+  return r.v;
+}
+test('arithmetic precedence and parentheses', function () {
+  assert.strictEqual(fx('1 + 2 * 3'), 7);
+  assert.strictEqual(fx('(1 + 2) * 3'), 9);
+  assert.strictEqual(fx('10 % 4'), 2);
+});
+test('strings, comparison, ternary and if', function () {
+  assert.strictEqual(fx('"a" + "b"'), 'ab');
+  assert.strictEqual(fx('2 > 1 ? "yes" : "no"'), 'yes');
+  assert.strictEqual(fx('if(1 == 2, "x", "y")'), 'y');
+  assert.strictEqual(fx('and(true, not false)'), true);
+});
+test('props and functions', function () {
+  assert.strictEqual(fx('prop("Price") * prop("Qty")', { Price: 2.5, Qty: 4 }), 10);
+  assert.strictEqual(fx('upper(concat("ab", "c"))'), 'ABC');
+  assert.strictEqual(fx('round(2.345 * 100) / 100'), 2.35);
+  assert.strictEqual(fx('length("hello")'), 5);
+  assert.strictEqual(fx('contains("kagoj notes", "notes")'), true);
+});
+test('errors are reported, not thrown', function () {
+  var r = K.Formula.run('1 +', function () { return null; });
+  assert.ok(r.err);
+  r = K.Formula.run('nosuchfn(1)', function () { return null; });
+  assert.ok(r.err);
+});
+test('dates', function () {
+  var d = { d: new Date(2026, 9, 10).getTime() };
+  var v = fx('dateBetween(prop("Due"), prop("Start"), "days")', { Due: d, Start: { d: new Date(2026, 9, 5).getTime() } });
+  assert.strictEqual(v, 5);
+  assert.strictEqual(fx('year(prop("Due"))', { Due: d }), 2026);
+});
+
+console.log('databases');
+(function () {
+  var map = {}, seq = 0;
+  var Docs = {
+    map: map,
+    get: function (id) { return map[id] || null; },
+    all: function () { return Object.keys(map).map(function (k) { return map[k]; }); },
+    isLive: function (d) { return !!d && !d.deleted_at; },
+    titleOf: function (d) { return d.title || 'Untitled'; },
+    children: function (pid, kinds) { return Docs.all().filter(function (d) { return d.parent_id === pid && (!kinds || kinds.indexOf(d.kind) >= 0) && !d.deleted_at; }).sort(function (a, b) { return a.position - b.position; }); },
+    update: function (id, ch) { for (var k in ch) { map[id][k] = ch[k]; } return map[id]; },
+    create: function (o) { var d = { id: 'd' + (++seq), parent_id: o.parent_id || null, kind: o.kind || 'page', title: o.title || '', props: o.props || {}, schema: o.schema || null, settings: o.settings || {}, content: o.content || [], position: seq, created_at: new Date(2026, 0, seq).toISOString(), updated_at: new Date().toISOString() }; map[d.id] = d; return d; },
+    blockId: function () { return 'b' + (++seq); },
+    eachBlock: function (list, fn) { list.forEach(fn); },
+    plain: function (h) { return String(h || '').replace(/<[^>]*>/g, ''); }
+  };
+  K.Docs = Docs;
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'js/db/model.js'), 'utf8'), ctx, { filename: 'js/db/model.js' });
+  var DB = K.DB;
+  var db = DB.create(null, 'Tasks');
+  var status = db.schema.props[1], date = db.schema.props[2], tags = db.schema.props[3];
+  tags.options = [{ id: 't1', name: 'home', color: 'blue' }, { id: 't2', name: 'work', color: 'red' }];
+  var price = { id: 'pp', name: 'Price', type: 'number', fmt: 'taka' };
+  var total = { id: 'pt', name: 'Total', type: 'formula', expr: 'prop("Price") * 2' };
+  db.schema.props.push(price, total);
+  function row(t, st, day, tg, pr) {
+    var init = { title: t }; init[status.id] = status.options[st].id;
+    if (day) { init[date.id] = { s: day }; }
+    if (tg) { init[tags.id] = tg; }
+    if (pr !== undefined) { init[price.id] = pr; }
+    return DB.newRow(db, init);
+  }
+  var a = row('Alpha', 0, '2026-10-01', ['t1'], 100), b = row('Beta', 2, '2026-10-03', ['t2'], 50), c = row('Gamma', 1, null, ['t1', 't2'], 1500);
+  test('values and display text', function () {
+    assert.strictEqual(DB.value(db, a, status), 'Not started');
+    assert.deepStrictEqual(Array.from(DB.value(db, c, tags)), ['home', 'work']);
+    assert.strictEqual(DB.value(db, a, total), 200);
+    assert.strictEqual(DB.text(db, c, price), '৳1,500');
+    assert.strictEqual(DB.text(db, a, date), 'Oct 1, 2026');
+  });
+  test('filters: select, multi, number, empty, OR, dates', function () {
+    function q(filter) { return DB.query(db, { filter: filter, sorts: [] }).map(function (r) { return r.title; }).join(','); }
+    assert.strictEqual(q({ op: 'and', rules: [{ pid: status.id, cond: 'is', val: status.options[2].id }] }), 'Beta');
+    assert.strictEqual(q({ op: 'and', rules: [{ pid: tags.id, cond: 'has', val: 't1' }] }), 'Alpha,Gamma');
+    assert.strictEqual(q({ op: 'and', rules: [{ pid: price.id, cond: 'gt', val: '60' }] }), 'Alpha,Gamma');
+    assert.strictEqual(q({ op: 'and', rules: [{ pid: date.id, cond: 'empty' }] }), 'Gamma');
+    assert.strictEqual(q({ op: 'or', rules: [{ pid: 'title', cond: 'contains', val: 'alp' }, { pid: price.id, cond: 'lt', val: '60' }] }), 'Alpha,Beta');
+    assert.strictEqual(q({ op: 'and', rules: [{ pid: date.id, cond: 'before', val: '2026-10-02' }] }), 'Alpha');
+  });
+  test('multi-sort with empty values last', function () {
+    var v = { filter: null, sorts: [{ pid: date.id, dir: 'desc' }] };
+    assert.strictEqual(DB.query(db, v).map(function (r) { return r.title; }).join(','), 'Beta,Alpha,Gamma');
+    v.sorts = [{ pid: status.id, dir: 'asc' }];
+    assert.strictEqual(DB.query(db, v).map(function (r) { return r.title; }).join(','), 'Alpha,Gamma,Beta');
+  });
+  test('grouping and calculations', function () {
+    var g = DB.group(db, DB.rows(db), tags.id);
+    assert.strictEqual(g.map(function (x) { return x.label + ':' + x.rows.length; }).join(','), 'home:2,work:2,No Tags:0');
+    var rows = DB.rows(db);
+    assert.strictEqual(DB.calc(db, rows, price, 'sum'), '৳1,650');
+    assert.strictEqual(DB.calc(db, rows, date, 'empty'), '1');
+    assert.strictEqual(DB.calc(db, rows, price, 'median'), '৳100');
+  });
+  test('relations and rollups', function () {
+    var proj = DB.create(null, 'Projects');
+    var rel = { id: 'pr', name: 'Tasks', type: 'relation', db: db.id };
+    var sum = { id: 'ps', name: 'Spend', type: 'rollup', rel: 'pr', target: price.id, fn: 'sum' };
+    proj.schema.props.push(rel, sum);
+    var p = DB.newRow(proj, { title: 'Launch' });
+    DB.set(p, 'pr', [a.id, b.id]);
+    assert.deepStrictEqual(Array.from(DB.value(proj, p, rel)), ['Alpha', 'Beta']);
+    assert.strictEqual(DB.value(proj, p, sum), 150);
+  });
+  test('unique IDs count up and templates copy content', function () {
+    var idp = { id: 'pi', name: 'ID', type: 'uid', prefix: 'T' };
+    db.schema.props.push(idp);
+    var r1 = DB.newRow(db, { title: 'x' }), r2 = DB.newRow(db, { title: 'y' });
+    assert.strictEqual(DB.value(db, r2, idp), 'T-' + (DB.raw(db, r1, idp) + 1));
+    var tpl = Docs.create({ parent_id: db.id, kind: 'row', title: 'Weekly', settings: { template: true }, content: [{ id: 'z', type: 'p', html: 'Agenda' }] });
+    var fromTpl = DB.newRow(db, {}, tpl);
+    assert.strictEqual(fromTpl.title, 'Weekly');
+    assert.strictEqual(fromTpl.content[0].html, 'Agenda');
+    assert.notStrictEqual(fromTpl.content[0].id, 'z');
+    assert.ok(DB.rows(db).indexOf(tpl) < 0);
+  });
+  test('datedItems finds rows across databases', function () {
+    var items = DB.datedItems().filter(function (i) { return i.db === db; });
+    assert.strictEqual(items.length, 2);
+  });
+})();
+
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);

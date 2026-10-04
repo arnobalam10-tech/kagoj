@@ -119,6 +119,7 @@
   P.renderAll = function () {
     var self = this, doc = this.doc, page = D.empty(this.pageEl);
     if (this.editor) { this.editor.destroy(); }
+    if (this.dbView && this.dbView.destroy) { this.dbView.destroy(); this.dbView = null; }
     this.applyStyle();
     this.renderCrumbs();
     this.updateEdited();

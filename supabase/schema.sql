@@ -124,3 +124,67 @@ returns boolean language sql stable security invoker set search_path = '' as $$
 $$;
 revoke all on function public.kagoj_asset_in_use(text, uuid) from anon, public;
 grant execute on function public.kagoj_asset_in_use(text, uuid) to authenticated;
+
+-- ===================================================================
+-- Migration kagoj_v2_docs (V2: typed pages, databases, rows, versions)
+-- ===================================================================
+create table if not exists public.docs (
+  id uuid primary key,
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  parent_id uuid references public.docs(id) on delete cascade,
+  kind text not null default 'page' check (kind in ('page','database','row','canvas')),
+  title text not null default '' check (char_length(title) <= 500),
+  icon text check (icon is null or char_length(icon) <= 300),
+  cover text check (cover is null or char_length(cover) <= 300),
+  position int not null default 0,
+  favorite boolean not null default false,
+  content jsonb not null default '[]'::jsonb check (pg_column_size(content) < 4000000),
+  props jsonb not null default '{}'::jsonb,
+  schema jsonb,
+  settings jsonb not null default '{}'::jsonb,
+  revision int not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+create index if not exists docs_updated_idx on public.docs (user_id, updated_at);
+create index if not exists docs_parent_idx on public.docs (parent_id, position);
+drop trigger if exists docs_touch on public.docs;
+create trigger docs_touch before update on public.docs
+  for each row execute function public.touch_updated_at();
+alter table public.docs enable row level security;
+create policy "own docs" on public.docs for all to authenticated
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+revoke all on public.docs from anon;
+
+create table if not exists public.doc_versions (
+  id bigserial primary key,
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  doc_id uuid not null references public.docs(id) on delete cascade,
+  title text,
+  content jsonb not null,
+  props jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists doc_versions_doc_idx on public.doc_versions (doc_id, created_at desc);
+alter table public.doc_versions enable row level security;
+create policy "own versions" on public.doc_versions for all to authenticated
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+revoke all on public.doc_versions from anon;
+revoke all on sequence public.doc_versions_id_seq from anon;
+
+create table if not exists public.user_settings (
+  user_id uuid primary key default auth.uid() references auth.users(id) on delete cascade,
+  data jsonb not null default '{}'::jsonb,
+  feed_token text unique,
+  updated_at timestamptz not null default now()
+);
+drop trigger if exists user_settings_touch on public.user_settings;
+create trigger user_settings_touch before update on public.user_settings
+  for each row execute function public.touch_updated_at();
+alter table public.user_settings enable row level security;
+create policy "own settings" on public.user_settings for all to authenticated
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+revoke all on public.user_settings from anon;
+
+update storage.buckets set allowed_mime_types = null where id = 'uploads';

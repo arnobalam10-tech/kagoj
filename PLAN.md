@@ -185,7 +185,7 @@ publish to web) are dropped. Phone reminders come from a private calendar feed (
       Markdown shortcuts, selection toolbar (B I U S code link colours), Turn into, block menu, drag to
       reorder, Tab indent; `@` page/date mentions, `[[` links, backlinks; fonts per page/block, heading/body
       fonts, size, line spacing, default font; dark mode; search (Ctrl+P); Home (recent, tasks, upcoming)
-- [ ] **P2 Databases**: properties (title, text, number, select, multi-select, status, date, checkbox, URL,
+- [x] **P2 Databases**: properties (title, text, number, select, multi-select, status, date, checkbox, URL,
       email, phone, created/edited time, unique ID, relation, rollup, formula); views Table / Board / List /
       Gallery / Calendar / Timeline / Chart; filters (AND/OR), sorts, group by, hide properties, column
       calculations; rows open as side peek / full page; inline + full-page databases; row templates

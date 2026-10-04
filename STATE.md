@@ -1,9 +1,20 @@
 # Kagoj — Current State
 
-_Last updated: 2026-10-03_
+_Last updated: 2026-10-05_
 
 ## Status
-**V2 P1 (typed pages) deployed as 2.0.0.** P0 + P1 done. Next: P2 databases, P3 calendar, P4 extras (PLAN.md V2).
+**V2 P2 (databases) built as 2.1.0.** P0 + P1 + P2 done. Next: P3 calendar + reminders + .ics feed, P4 extras (PLAN.md V2).
+
+### V2 P2 — databases
+- Files: js/db/formula.js (formula language), model.js (K.DB: schema, values, filters, sorts, groups, calculations, dated items), editors.js (value pickers, property settings, filters, sorts, view settings), views.js (K.DbView), peek.js (row properties, side peek, inline block + slash items), css/db.css. Bundle `db` (101 KB of 110), loaded with `editor` for the page screen.
+- Property types: title, text, number (plain/commas/%/$/€/£/৳/₹/progress bar/ring), select, multi-select, status (to-do/in progress/complete groups), date (range, time, reminder offset), checkbox, URL, email, phone, relation, rollup (count/sum/avg/min/max/checked/%/earliest/latest), formula, created time, last edited, unique ID (with prefix).
+- Views: table (column resize, reorder, hide, calculations footer, grouping, collapsible groups), board (drag cards between groups; long-press on touch), list, gallery (cover = row cover or first image), calendar (month; drag to another day; tap a day to add), timeline (days/weeks/months; drag to move, drag the right edge to resize), chart (bar/donut/line; count or sum).
+- Filters (AND/OR, relative dates), multi-sort, search inside a view, per-view settings. New rows inherit filter and group values. Row templates (default template, manage/edit/delete).
+- Rows open in a side peek at >=900px wide, otherwise as a full page; row pages show their properties under the title.
+- Inline databases and views via / menu (Database inline/full page, Board/Calendar/List/Gallery/Timeline view, Chart, Linked view). Home "New database".
+- Tests: 41 unit tests (formula + database model added).
+- Schema: kagoj_v2_docs migration now recorded in supabase/schema.sql.
+
 
 ### V2 P1 — what exists
 - Sidebar (pinned at >=1000px wide, slide-out below): Search, Home, Calendar, Handwritten notebooks, Uploads, Settings, Favorites, nested Pages tree (expand, +, ••• menu, press-and-hold / mouse drag to move or nest), Trash, sync pill, New page.
