@@ -87,8 +87,23 @@ Promise.all(bundles.map(function (b) { return terser.minify(source(b), TERSER); 
   outs.forEach(function (o, i) {
     var b = bundles[i];
     if (!o.code) { fail('terser produced no output for ' + b.name); }
-    try { espree.parse(o.code, { ecmaVersion: 5, sourceType: 'script' }); }
+    var ast = null;
+    try { ast = espree.parse(o.code, { ecmaVersion: 5, sourceType: 'script' }); }
     catch (e) { fail(b.name + ' bundle is not valid ES5: ' + e.message); }
+    // iOS 9 Safari (strict mode) rejects function declarations inside blocks
+    (function walk(node, parent) {
+      if (!node || typeof node.type !== 'string') { return; }
+      if (node.type === 'FunctionDeclaration' && parent && parent.type !== 'Program' &&
+          !(parent.type === 'BlockStatement' && parent.isFnBody)) {
+        fail(b.name + ' bundle has a function declaration inside a block (breaks iOS 9) near offset ' + node.start);
+      }
+      if ((node.type === 'FunctionDeclaration' || node.type === 'FunctionExpression') && node.body) { node.body.isFnBody = true; }
+      Object.keys(node).forEach(function (k) {
+        var v = node[k];
+        if (Array.isArray(v)) { v.forEach(function (c) { walk(c, node); }); }
+        else if (v && typeof v.type === 'string' && k !== 'parent') { walk(v, node); }
+      });
+    })(ast, null);
     var limit = b.name === 'core' ? BUDGET.core : BUDGET.other;
     if (o.code.length > limit) { fail(b.name + ' bundle over budget: ' + o.code.length + ' > ' + limit); }
     b.code = o.code;

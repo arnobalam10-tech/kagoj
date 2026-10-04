@@ -257,7 +257,7 @@
       var grip = D.el('div.img-resize');
       frame.appendChild(grip);
       var sx = 0, sw = 0;
-      function move(x) { var pw = box.clientWidth || 1; b.w = U.clamp(Math.round(sw + (x - sx) / pw * 200), 15, 100); frame.style.width = b.w + '%'; }
+      var move = function (x) { var pw = box.clientWidth || 1; b.w = U.clamp(Math.round(sw + (x - sx) / pw * 200), 15, 100); frame.style.width = b.w + '%'; };
       D.on(grip, 'touchstart', function (e) { e.stopPropagation(); sx = e.touches[0].clientX; sw = b.w || 100; }, D.passiveFalse);
       D.on(grip, 'touchmove', function (e) { if (e.cancelable) { e.preventDefault(); } move(e.touches[0].clientX); }, D.passiveFalse);
       D.on(grip, 'touchend', function () { ed.changed(true); });

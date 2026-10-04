@@ -181,9 +181,25 @@
     return !!(n && (n.d || 0) > (b.d || 0));
   };
 
-  // Hide blocks inside closed toggles; number lists; empty-page placeholder
+  // The block being edited (and the blocks around it, for columns / tables)
+  // shows its controls. Old iPad Safari has no :focus-within, so it's a class.
+  function markCurrent(target) {
+    var old = document.querySelectorAll('.blk.cur');
+    var keep = [];
+    for (var n = target; n && n !== document.body; n = n.parentNode) {
+      if (n.classList && n.classList.contains('blk')) { keep.push(n); }
+    }
+    for (var i = 0; i < old.length; i++) { if (keep.indexOf(old[i]) < 0) { old[i].classList.remove('cur'); } }
+    keep.forEach(function (x) { x.classList.add('cur'); });
+  }
+  Editor.markCurrent = markCurrent;
+
+  function isParentType(b) { return !!(LISTY[b.type] || (b.tg && /^h[123]$/.test(b.type))); }
+
+  // Hide blocks inside closed toggles; number lists; empty-page placeholder;
+  // guide lines that show which list item / toggle a block is inside
   P.refreshDerived = function () {
-    var closed = [], counters = [], self = this;
+    var closed = [], counters = [], self = this, anc = [];
     this.blocks.forEach(function (b, i) {
       var d = b.d || 0;
       while (closed.length && d <= closed[closed.length - 1]) { closed.pop(); }
@@ -191,6 +207,29 @@
       if (!e) { return; }
       var hidden = closed.length > 0;
       e.wrap.style.display = hidden ? 'none' : '';
+      // guides
+      anc.length = Math.min(anc.length, d);
+      var old = e.wrap.querySelectorAll('.blk-guide');
+      for (var g = 0; g < old.length; g++) { if (old[g].parentNode === e.wrap) { D.remove(old[g]); } }
+      var inside = false;
+      for (var a = 0; a < d; a++) {
+        var pa = anc[a];
+        if (!pa || !isParentType(pa)) { continue; }
+        inside = true;
+        e.wrap.appendChild(D.el('span.blk-guide' + (pa.type === 'toggle' || pa.tg ? '.tg' : ''), { style: { left: (a * 26 + 11) + 'px' } }));
+      }
+      e.wrap.classList.toggle('nested-in', inside);
+      anc[d] = b;
+      // an open toggle with nothing inside says so
+      var isTg = b.type === 'toggle' || (b.tg && /^h[123]$/.test(b.type));
+      var hint = e.body.querySelector('.tg-hint');
+      var nx = self.blocks[i + 1];
+      var empty = isTg && b.open && !(nx && (nx.d || 0) > d) && !self.locked();
+      if (empty && !hint) {
+        hint = D.el('button.tg-hint', { type: 'button', text: 'Empty toggle. Tap here to write inside it.' });
+        D.tap(hint, function () { self.insertAfter(b.id, Docs.newBlock('p', { d: d + 1 }), true); });
+        e.body.appendChild(hint);
+      } else if (!empty && hint) { D.remove(hint); }
       if (!hidden && (b.type === 'toggle' || (b.tg && /^h[123]$/.test(b.type))) && !b.open) { closed.push(d); }
       // numbering: restart when something else interrupts at the same depth
       counters.length = d + 1;
@@ -272,6 +311,7 @@
   };
 
   P.onFocus = function (e) {
+    markCurrent(e.target);
     var w = this.own(e.target);
     if (!w) { return; }
     this.page.current = { ed: this, id: w.getAttribute('data-id') };

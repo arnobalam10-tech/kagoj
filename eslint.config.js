@@ -28,6 +28,7 @@ module.exports = [
       'no-redeclare': 'error',
       'no-dupe-keys': 'error',
       'no-unreachable': 'error',
+      'no-inner-declarations': ['error', 'functions'],
       'no-restricted-globals': ['error',
         'fetch', 'Promise', 'Map', 'Set', 'WeakMap', 'WeakSet', 'Symbol', 'Proxy', 'Reflect',
         'ResizeObserver', 'IntersectionObserver', 'CompressionStream', 'WebAssembly'],

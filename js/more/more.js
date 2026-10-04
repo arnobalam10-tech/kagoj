@@ -176,6 +176,27 @@
     loadCss('/vendor/katex/katex.min.css');
     loadScript('/vendor/katex/katex.min.js', function () { return !!window.katex; }, cb);
   }
+  // KaTeX and Mermaid need a modern browser (classes, arrows). The old iPad shows the
+  // result saved by a device that could draw it.
+  var modernJs = (function () { try { return !!new Function('class A {}; var f = (x) => x; return 1;')(); } catch (e) { return false; } })();
+
+  // saved equation markup is shown with innerHTML: keep only plain markup
+  function cleanHtml(html) {
+    try {
+      var doc = document.implementation.createHTMLDocument('');
+      var box = doc.createElement('div');
+      box.innerHTML = html;
+      Array.prototype.slice.call(box.querySelectorAll('script, iframe, object, embed, link, meta, style, img, a, form, input')).forEach(function (n) { n.parentNode.removeChild(n); });
+      Array.prototype.slice.call(box.querySelectorAll('*')).forEach(function (n) {
+        Array.prototype.slice.call(n.attributes).forEach(function (at) {
+          var nm = at.name.toLowerCase(), v = String(at.value).replace(/\s+/g, '').toLowerCase();
+          if (nm.indexOf('on') === 0 || nm === 'href' || nm === 'xlink:href' || nm === 'src' || (nm === 'style' && /url\(|expression|javascript:/.test(v))) { n.removeAttribute(at.name); }
+        });
+      });
+      return box.innerHTML.substr(0, 200000);
+    } catch (e) { return ''; }
+  }
+
   V.math = function (b, ed, entry) {
     var box = D.el('div.math-box');
     var out = D.el('div.math-out');
@@ -184,9 +205,17 @@
     function show() {
       if (!b.tex) { out.textContent = 'Tap to write an equation'; out.className = 'math-out ph'; return; }
       out.className = 'math-out';
+      if (!modernJs) {
+        loadCss('/vendor/katex/katex.min.css');
+        if (b.out && b.outTex === b.tex) { out.innerHTML = cleanHtml(b.out); } else { out.className = 'math-out raw'; out.textContent = b.tex; }
+        return;
+      }
       katex(function (err) {
         if (err) { out.textContent = b.tex; return; }
-        try { window.katex.render(b.tex, out, { displayMode: true, throwOnError: false, trust: false, maxSize: 50, maxExpand: 500 }); } catch (e) { out.textContent = b.tex; }
+        try {
+          window.katex.render(b.tex, out, { displayMode: true, throwOnError: false, trust: false, maxSize: 50, maxExpand: 500, output: 'html' });
+          if (b.outTex !== b.tex) { b.out = cleanHtml(out.innerHTML); b.outTex = b.tex; ed.changed(); }
+        } catch (e) { out.textContent = b.tex; }
       });
     }
     function editing(on) { box.classList.toggle('editing', on); if (on) { src.focus(); } }
@@ -197,6 +226,7 @@
     show();
     entry.focusEl = src;
     D.append(box, [out, src]);
+    if (!modernJs) { box.appendChild(D.el('div.math-note', { text: 'This device shows equations saved on a computer or phone. Edits here appear as code until opened there.' })); }
     return box;
   };
   V.math.after = function (b, ed) { var e = ed.els[b.id]; if (e) { e.wrap.querySelector('.math-box').classList.add('editing'); setTimeout(function () { e.focusEl.focus(); }, 30); } };
@@ -223,7 +253,7 @@
   }
   K.cleanSvg = cleanSvg;
 
-  var mermaidOk = !!(window.Promise && window.Symbol && ('assign' in Object));   // the library needs a modern browser
+  var mermaidOk = modernJs;
   var mermaidReady = false, mseq = 0;
   function mermaid(cb) {
     if (!mermaidOk) { cb(new Error('old')); return; }

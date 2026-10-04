@@ -3,7 +3,14 @@
 _Last updated: 2026-10-05_
 
 ## Status
-**V2 complete (2.3.0): P0-P4 done.** Waiting on the owner to log in on each device and try it; bugs reported go into the next round.
+**V2 complete (2.3.1): P0-P4 done.**
+
+### 2.3.1 fixes (owner feedback)
+- iPad (iOS 9.3.5): editor bundle failed with "Strict mode does not allow function declarations in a lexically nested statement" (a function declared inside an if in blocks.js). Fixed; ESLint no-inner-declarations added and the build now walks every minified bundle and fails on block-level function declarations.
+- KaTeX/Mermaid need modern JS: equations and diagrams are rendered on PC/phone and the cleaned result is saved in the block (b.out / b.svg); the iPad shows the saved result.
+- Nesting guides: thin lines show which list item / toggle a block sits under (stronger line for toggles); open empty toggles show a tap-to-write hint.
+- Columns: faint divider and "Column" placeholders always; dashed outline around each column on hover / while editing; phone shows columns stacked with a left rule.
+- Table + buttons and touch-device block handles only show on hover or for the block being edited (.blk.cur class, since iOS 9 has no :focus-within; the old :focus-within selector also broke the hover rule on iOS 9). Waiting on the owner to log in on each device and try it; bugs reported go into the next round.
 
 ### V2 P4 — extras (bundle `more`, loaded with pages)
 - Version history: page menu › Version history lists doc_versions (needs login + network), preview, restore (undoable).

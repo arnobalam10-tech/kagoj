@@ -39,3 +39,6 @@ kbd { font: 12.5px Menlo, Consolas, monospace; background: #F1EFEA; border: 1px 
   .blk { break-inside: avoid; page-break-inside: avoid; }
   .tbl-wrap, .board, .cal-wrap { overflow: visible !important; }
 }
+.math-out.raw { font: 14px Menlo, Consolas, monospace; color: #6E6A61; }
+.math-note { display: none; font-size: 12px; color: #B5B1A8; }
+.math-box.editing .math-note { display: block; }
