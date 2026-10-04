@@ -30,28 +30,33 @@
     return '#/';
   };
 
-  // Second bundle (Uploads, page picker, PDF import, Settings, debug console).
-  // In development the files are already loaded; in production the build sets
-  // window.KAGOJ_EXTRAS to the hashed bundle URL.
-  var extrasWaiting = null;
-  app.extrasLoaded = function () { return !!(K.screens.settings && K.pickPages); };
-  app.loadExtras = function (cb) {
+  // On-demand bundles (see index.html / scripts/build.js). In development every
+  // file is already loaded, so need() answers at once.
+  var waiting = {};
+  K.loaded = K.loaded || {};
+  app.need = function (name, cb) {
     cb = cb || function () {};
-    if (app.extrasLoaded()) { cb(null); return; }
-    if (extrasWaiting) { extrasWaiting.push(cb); return; }
-    extrasWaiting = [cb];
+    var map = window.KAGOJ_BUNDLES;
+    if (!map || !map[name] || K.loaded[name]) { cb(null); return; }
+    if (waiting[name]) { waiting[name].push(cb); return; }
+    waiting[name] = [cb];
     var s = document.createElement('script');
-    s.src = window.KAGOJ_EXTRAS;
+    s.src = map[name];
     function finish(err) {
-      var list = extrasWaiting; extrasWaiting = null;
+      var list = waiting[name]; delete waiting[name];
       if (err) { D.remove(s); }
-      else if (K.debug && K.debug.isOn()) { K.debug.show(); }
       for (var i = 0; i < list.length; i++) { list[i](err); }
+      if (!err) { app.emit('bundle', name); }
     }
-    s.onload = function () { finish(app.extrasLoaded() ? null : new Error('extras incomplete')); };
+    s.onload = function () { finish(K.loaded[name] ? null : new Error('Part of the app did not load (' + name + ').')); };
     s.onerror = function () { finish(new Error('Could not load this part of the app. Check the connection.')); };
     document.body.appendChild(s);
   };
+  app.loadExtras = function (cb) { app.need('extra', cb); };
+  app.extrasLoaded = function () { return !window.KAGOJ_BUNDLES || !!K.loaded.extra; };
+
+  // Which bundle each screen lives in
+  app.screenBundle = { workspace: 'canvas', dashboard: 'canvas', uploads: 'extra', folder: 'extra', settings: 'extra', login: 'extra' };
 
   // Application Cache lets the iOS 9 home-screen app open with no network.
   function watchAppCache() {
@@ -102,7 +107,7 @@
         if (err2) { fatal('Could not read local data: ' + (err2.message || err2)); return; }
         K.Repo.purgeOld();
         K.Sync.start();
-        if (K.debug && K.debug.isOn()) { K.debug.show(); }
+        if (U.lsGet('kagoj.debug', false)) { app.need('extra', function () { if (K.debug) { K.debug.show(); } }); }
         var splash = document.getElementById('splash');
         if (splash) { D.remove(splash); }
         if (!location.hash || location.hash === '#' || location.hash === '#/') {
@@ -112,8 +117,6 @@
         }
         K.router.start(root);
         watchAppCache();
-        // fetch the second bundle in the background so it is ready (and cached)
-        setTimeout(function () { app.loadExtras(); }, 1500);
       });
     });
   };

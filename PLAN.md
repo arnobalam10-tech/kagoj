@@ -176,7 +176,7 @@ publish to web) are dropped. Phone reminders come from a private calendar feed (
 - **Fonts**: system fonts + bundled web fonts (woff, loaded only when used).
 
 ## Phases
-- [ ] **P0 Restructure**: multi-bundle build + loader; pen engine moved to its own bundle; palm options moved
+- [x] **P0 Restructure**: multi-bundle build + loader; pen engine moved to its own bundle; palm options moved
       into the floating tool button
 - [ ] **P1 Pages**: `docs` table + sync + merge; sidebar tree (favorites, expand, +, •••, drag to move/nest,
       trash); top bar (breadcrumbs, star, •••); page icon + cover; block editor (text, H1–H3, bullets,

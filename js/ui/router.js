@@ -40,8 +40,9 @@
     if (r.name !== 'login' && !K.app.canUseApp()) { router.go('#/login'); return; }
     var screen = K.screens[r.name];
     if (!screen) {
-      K.app.loadExtras(function (err) {
-        if (err) { K.sheets.toast(err.message, 5000); if (r.name !== 'dashboard') { router.go('#/'); } return; }
+      K.app.need(K.app.screenBundle[r.name] || 'extra', function (err) {
+        if (!err && !K.screens[r.name]) { err = new Error('This screen is missing (' + r.name + ').'); }
+        if (err) { K.sheets.toast(err.message, 5000); return; }
         router.handle();
       });
       return;
