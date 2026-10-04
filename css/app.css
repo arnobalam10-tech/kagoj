@@ -294,3 +294,15 @@ body.dark { background: #1C1C1C; color: #E8E6E1; }
 .dark .card-title, .dark .hc-title { color: #E8E6E1; }
 
 html.dark { background: #1C1C1C; }
+.sb-section { border-radius: 6px; margin-top: 16px; }
+.sb-sec-name { -webkit-appearance: none; border: 0; background: transparent; -webkit-box-flex: 1; -webkit-flex: 1; flex: 1; min-width: 0; text-align: left; padding: 6px 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-sec-name span { padding: 0; }
+.sb-sec-ico { margin-right: 6px; font-size: 13px; }
+.sb-sec-caret { width: 13px; height: 13px; margin-left: 4px; vertical-align: -2px; opacity: 0; }
+.sb-section:hover .sb-sec-caret, .has-touch .sb-sec-caret { opacity: 0.8; }
+.sb-section.closed .sb-sec-caret { -webkit-transform: rotate(-90deg); transform: rotate(-90deg); }
+.sb-section .tree-act { opacity: 0; }
+.sb-section:hover .tree-act, .has-touch .sb-section .tree-act { opacity: 0.8; }
+.sb-section.drop-in { background: rgba(47,93,168,0.15); }
+.sb-sec-empty { padding-left: 30px; }
+.sb-section .tree-act, .sb-sec-name span { -webkit-box-flex: 0; -webkit-flex: none; flex: none; padding: 0; }

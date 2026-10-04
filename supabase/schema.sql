@@ -188,3 +188,7 @@ create policy "own settings" on public.user_settings for all to authenticated
 revoke all on public.user_settings from anon;
 
 update storage.buckets set allowed_mime_types = null where id = 'uploads';
+
+-- Migration kagoj_v2_sections: sidebar sections are top-level docs of kind 'section'
+alter table public.docs drop constraint docs_kind_check;
+alter table public.docs add constraint docs_kind_check check (kind in ('page','database','row','canvas','section'));

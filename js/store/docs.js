@@ -26,7 +26,15 @@
   };
 
   Docs.get = function (id) { return Docs.map[id] || null; };
-  Docs.all = function () { return U.values(Docs.map); };
+  // sidebar sections (Personal, University, ...) are docs too, but never listed as pages
+  Docs.all = function () { return U.values(Docs.map).filter(function (d) { return d.kind !== 'section'; }); };
+  Docs.sections = function () {
+    return U.values(Docs.map).filter(function (d) { return d.kind === 'section' && !d.parent_id && !d.deleted_at; }).sort(byPos);
+  };
+  Docs.sectionOf = function (id) {
+    var p = Docs.path(id);
+    return p.length && p[0].kind === 'section' ? p[0] : null;
+  };
 
   // Visible = not deleted and no deleted ancestor
   Docs.isLive = function (d) {
@@ -250,7 +258,7 @@
     if (!q) { return []; }
     var words = q.split(/\s+/), out = [];
     U.values(Docs.map).forEach(function (d) {
-      if (!Docs.isLive(d)) { return; }
+      if (!Docs.isLive(d) || d.kind === 'section') { return; }
       var title = Docs.titleOf(d).toLowerCase();
       var text = opts && opts.titleOnly ? '' : Docs.textOf(d).toLowerCase();
       var score = 0, ok = true;

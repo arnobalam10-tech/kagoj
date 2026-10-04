@@ -440,6 +440,7 @@
       D.append(root, [top, D.el('div.doc-scroll', null, D.el('div.page', null, [D.el('p.empty', { text: doc ? 'This page is in the Trash.' : 'This page is not on this device yet. It will appear after the next sync.' }), home]))]);
       return;
     }
+    if (doc.kind === 'section') { K.router.go('#/'); setTimeout(function () { K.shell.openDoc(doc); }, 50); return; }
     if (doc.kind === 'canvas' && doc.settings && doc.settings.notebook) { K.router.go('#/nb/' + doc.settings.notebook + '/1'); return; }
     view = new PageView(root, doc);
     view.onRemote = function (id) {

@@ -65,12 +65,19 @@
     return '#/p/' + d.id;
   };
   Shell.openDoc = function (d) {
+    if (d && d.kind === 'section') {
+      // sections aren't pages: show them in the sidebar
+      setSecOpen(d.id, true); K.prefs.set('sbLastSection', d.id); renderSide(); Shell.open(); return;
+    }
     Shell.close();
     if (d) { K.Docs.visit(d.id); }
     K.router.go(Shell.hrefFor(d));
   };
 
   Shell.newPage = function (parentId, kind) {
+    parentId = parentId || Shell.defaultParent();
+    var sec = K.Docs.get(parentId);
+    if (sec && sec.kind === 'section') { K.prefs.set('sbLastSection', sec.id); }
     var d = K.Docs.create({ parent_id: parentId || null, kind: kind || 'page', content: kind === 'database' ? [] : undefined });
     if (parentId) { var o = K.prefs.get('sbOpen'); o[parentId] = true; K.prefs.set('sbOpen', o); }
     Shell.openDoc(d);
@@ -79,6 +86,7 @@
 
   // A handwritten notebook that lives in the page tree
   Shell.newCanvas = function (parentId) {
+    parentId = parentId || Shell.defaultParent();
     var res = K.Repo.createNotebook({ title: 'Handwritten notes', cover_color: '#2F3640', default_paper: 'ruled' });
     var d = K.Docs.create({ parent_id: parentId || null, kind: 'canvas', title: res.notebook.title, icon: '✍️', content: [], settings: { notebook: res.notebook.id } });
     Shell.openDoc(d);
@@ -155,7 +163,7 @@
     var timer = null, sx = 0, sy = 0, moved = false, startT = 0;
     function begin(x, y) { drag = { id: d.id, ghost: null, x: x, y: y }; row.classList.add('dragging'); }
     function target(x, y) {
-      var list = el.side.querySelectorAll('.tree-row');
+      var list = el.side.querySelectorAll('.tree-row, .sb-section');
       for (var i = 0; i < list.length; i++) {
         var r = list[i].getBoundingClientRect();
         if (y >= r.top && y <= r.bottom) { return { row: list[i], before: y < r.top + r.height * 0.3 }; }
@@ -165,7 +173,7 @@
     function mark(t) {
       var marked = el.side.querySelectorAll('.drop-in, .drop-before');
       for (var i = 0; i < marked.length; i++) { marked[i].classList.remove('drop-in'); marked[i].classList.remove('drop-before'); }
-      if (t && t.row.getAttribute('data-id') !== d.id) { t.row.classList.add(t.before ? 'drop-before' : 'drop-in'); }
+      if (t && t.row.getAttribute('data-id') !== d.id) { t.row.classList.add(t.before && !t.row.classList.contains('sb-section') ? 'drop-before' : 'drop-in'); }
     }
     function finish(x, y) {
       row.classList.remove('dragging');
@@ -178,7 +186,10 @@
       var tdoc = K.Docs.get(tid);
       if (!tdoc) { return; }
       var ok;
-      if (t.before) {
+      if (tdoc.kind === 'section') {
+        ok = K.Docs.move(d.id, tid, null);
+        if (ok) { setSecOpen(tid, true); }
+      } else if (t.before) {
         var sibs = K.Docs.treeChildren(tdoc.parent_id), prev = null;
         for (var i = 0; i < sibs.length; i++) { if (sibs[i].id === tid) { break; } if (sibs[i].id !== d.id) { prev = sibs[i]; } }
         ok = K.Docs.move(d.id, tdoc.parent_id, prev ? prev.id : null);
@@ -272,9 +283,12 @@
     function render() {
       D.empty(body);
       var q = input.value.toLowerCase();
-      var top = D.el('button.pick-row', { type: 'button' }, [D.icon('home'), D.el('span.pick-label', { text: 'Top level (no parent)' })]);
-      D.tap(top, function () { choose(null); });
-      body.appendChild(top);
+      K.Docs.sections().forEach(function (sec) {
+        if (q && K.Docs.titleOf(sec).toLowerCase().indexOf(q) < 0) { return; }
+        var r0 = D.el('button.pick-row', { type: 'button' }, [D.el('span.ti', { text: sec.icon || '' }, sec.icon ? null : D.icon('folder')), D.el('span.pick-label', null, [D.el('span', { text: K.Docs.titleOf(sec) }), D.el('span.pick-sub', { text: 'Section' })])]);
+        D.tap(r0, function () { choose(sec.id); });
+        body.appendChild(r0);
+      });
       K.Docs.all().filter(function (x) {
         return (x.kind === 'page' || x.kind === 'database') && x.id !== d.id && K.Docs.isLive(x) && !K.Docs.isAncestor(d.id, x.id) &&
           (!q || K.Docs.titleOf(x).toLowerCase().indexOf(q) >= 0);
@@ -288,6 +302,107 @@
     D.on(input, 'input', render);
     render();
   };
+
+  // ---------- sections (Personal, University, Life ...) ----------
+
+  // Always at least one section; pages left at the top level (made on an older
+  // version or another device) go into the first one.
+  function ensureSections() {
+    var secs = K.Docs.sections();
+    if (!secs.length) {
+      var uid = K.sb && K.sb.userId && K.sb.userId();
+      // the same id on every device, so two devices never make two "Personal" sections
+      var id = uid && /^[0-9a-f]{8}-/.test(uid) ? '5ec7104e' + uid.substr(8) : undefined;
+      var existing = id ? K.Docs.get(id) : null;
+      if (existing) { K.Docs.update(id, { deleted_at: null }, { meta: true }); }
+      else { K.Docs.create({ id: id, kind: 'section', title: 'Personal', content: [] }); }
+      secs = K.Docs.sections();
+    }
+    var first = secs[0];
+    K.Docs.treeChildren(null).forEach(function (d) {
+      if (K.Docs.isLive(d)) { K.Docs.update(d.id, { parent_id: first.id, position: K.Docs.positionAt(first.id, null) }, { meta: true }); }
+    });
+  }
+
+  // Where "New page" goes: the section of the open page, else the last one used
+  Shell.defaultParent = function () {
+    var cur = currentDocId(), sec = cur ? K.Docs.sectionOf(cur) : null;
+    if (!sec) { var last = K.Docs.get(K.prefs.get('sbLastSection') || ''); if (last && last.kind === 'section' && !last.deleted_at) { sec = last; } }
+    if (!sec) { ensureSections(); sec = K.Docs.sections()[0]; }
+    return sec ? sec.id : null;
+  };
+
+  function setSecOpen(id, on) {
+    var c = K.prefs.get('sbSecClosed');
+    if (on) { delete c[id]; } else { c[id] = true; }
+    K.prefs.set('sbSecClosed', c);
+  }
+
+  function renderSection(sec, scroll) {
+    var open = !K.prefs.get('sbSecClosed')[sec.id];
+    var head = D.el('div.sb-sec.sb-section' + (open ? '' : '.closed'), { 'data-id': sec.id });
+    var name = D.el('button.sb-sec-name', { type: 'button' }, [sec.icon ? D.el('span.sb-sec-ico', { text: sec.icon }) : null, D.el('span', { text: K.Docs.titleOf(sec) === 'Untitled' ? 'Untitled section' : K.Docs.titleOf(sec) }), D.icon('chevron-down', 'sb-sec-caret')]);
+    D.tap(name, function () { setSecOpen(sec.id, !open); renderSide(); });
+    var more = D.button({ icon: 'more', title: 'Section options', cls: 'sb-mini' });
+    D.tap(more, function (e) { if (e && e.stopPropagation) { e.stopPropagation(); } Shell.sectionMenu(sec); });
+    var add = D.button({ icon: 'plus', title: 'Add a page to ' + K.Docs.titleOf(sec), cls: 'sb-mini' });
+    D.tap(add, function (e) { if (e && e.stopPropagation) { e.stopPropagation(); } setSecOpen(sec.id, true); Shell.newPage(sec.id); });
+    D.append(head, [name, D.el('span.tree-act', null, [more, add])]);
+    scroll.appendChild(head);
+    if (!open) { return; }
+    var tl = D.el('div.tree');
+    var kids = K.Docs.treeChildren(sec.id);
+    kids.forEach(function (d) { treeRow(d, 0, tl); });
+    if (!kids.length) {
+      var e2 = D.el('button.sb-item.sb-add.sb-sec-empty', { type: 'button' }, [D.icon('plus'), D.el('span', { text: 'Add a page' })]);
+      D.tap(e2, function () { Shell.newPage(sec.id); });
+      tl.appendChild(e2);
+    }
+    scroll.appendChild(tl);
+  }
+
+  Shell.newSection = function () {
+    sheets.prompt({ title: 'New section', value: '', ok: 'Add' }, function (v) {
+      if (v === null) { return; }
+      v = v.replace(/^\s+|\s+$/g, '').substr(0, 100);
+      if (!v) { return; }
+      var s = K.Docs.create({ kind: 'section', title: v, content: [] });
+      K.prefs.set('sbLastSection', s.id);
+      renderSide();
+    });
+  };
+
+  Shell.sectionMenu = function (sec) {
+    var secs = K.Docs.sections(), i = secs.indexOf(sec);
+    function inSec(fn) { return function () { K.prefs.set('sbLastSection', sec.id); fn(); }; }
+    sheets.actionSheet({ title: K.Docs.titleOf(sec), items: [
+      { label: 'Add a page', icon: 'plus', onTap: inSec(function () { Shell.newPage(sec.id); }) },
+      { label: 'Add a database', icon: 'table', onTap: inSec(function () { Shell.newPage(sec.id, 'database'); }) },
+      { label: 'Add a handwritten page', icon: 'pen', onTap: inSec(function () { Shell.newCanvas(sec.id); }) },
+      { label: 'New page from a template', icon: 'page-add', onTap: inSec(function () {
+        K.app.needAll(['editor', 'db', 'more'], function (err) { if (!err && K.templatePicker) { Shell.close(); K.templatePicker(sec.id); } });
+      }) },
+      { label: 'Rename', icon: 'edit', onTap: function () { Shell.rename(sec); } },
+      { label: 'Choose an icon', icon: 'smile', onTap: function () {
+        sheets.prompt({ title: 'Icon (an emoji, or empty for none)', value: sec.icon || '', max: 8 }, function (v) {
+          if (v !== null) { K.Docs.update(sec.id, { icon: v.replace(/^\s+|\s+$/g, '') || null }, { meta: true }); renderSide(); }
+        });
+      } },
+      i > 0 ? { label: 'Move up', icon: 'chevron-up', onTap: function () { swapPos(sec, secs[i - 1]); } } : null,
+      i < secs.length - 1 ? { label: 'Move down', icon: 'chevron-down', onTap: function () { swapPos(sec, secs[i + 1]); } } : null,
+      { label: 'Delete section', icon: 'trash', danger: true, onTap: function () {
+        if (secs.length < 2) { sheets.toast('Keep at least one section. Add another one first.', 4000); return; }
+        Shell.remove(sec);
+      } }
+    ] });
+  };
+  function swapPos(a, b) {
+    var pa = a.position, pb = b.position;
+    if (pa === pb) { pb = pa + 1; }
+    K.Docs.update(a.id, { position: pb }, { meta: true });
+    K.Docs.update(b.id, { position: pa }, { meta: true });
+    renderSide();
+  }
 
   function renderSide() {
     if (!el.side) { return; }
@@ -320,22 +435,11 @@
       }
     }
 
-    var ph = sectionHead('Pages', 'sbPagesOpen', function () { Shell.newPage(null); });
-    scroll.appendChild(ph.el);
-    if (ph.open) {
-      var tl = D.el('div.tree');
-      K.Docs.treeChildren(null).forEach(function (d) { treeRow(d, 0, tl); });
-      scroll.appendChild(tl);
-      var add = D.el('button.sb-item.sb-add', { type: 'button' }, [D.icon('plus'), D.el('span', { text: 'Add a page' })]);
-      D.tap(add, function () { Shell.newPage(null); });
-      var addHw = D.el('button.sb-item.sb-add', { type: 'button' }, [D.icon('pen'), D.el('span', { text: 'Add a handwritten page' })]);
-      D.tap(addHw, function () { Shell.newCanvas(null); });
-      var addTpl = D.el('button.sb-item.sb-add', { type: 'button' }, [D.icon('page-add'), D.el('span', { text: 'New page from a template' })]);
-      D.tap(addTpl, function () { K.app.needAll(['editor', 'db', 'more'], function (err) { if (!err && K.templatePicker) { Shell.close(); K.templatePicker(null); } }); });
-      scroll.appendChild(add);
-      scroll.appendChild(addHw);
-      scroll.appendChild(addTpl);
-    }
+    ensureSections();
+    K.Docs.sections().forEach(function (sec) { renderSection(sec, scroll); });
+    var addSec = D.el('button.sb-item.sb-add', { type: 'button' }, [D.icon('plus'), D.el('span', { text: 'Add a section' })]);
+    D.tap(addSec, function () { Shell.newSection(); });
+    scroll.appendChild(addSec);
     scroll.appendChild(D.el('div.sb-gap'));
     scroll.appendChild(navItem('trash', 'Trash', '#/trash'));
     side.appendChild(scroll);

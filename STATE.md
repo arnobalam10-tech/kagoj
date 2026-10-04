@@ -3,7 +3,12 @@
 _Last updated: 2026-10-05_
 
 ## Status
-**V2 complete (2.3.1): P0-P4 done.**
+**V2 complete (2.4.0): P0-P4 done.**
+
+### 2.4.0 sidebar sections
+- The sidebar "Pages" list is replaced by sections like Notion (Personal, University, Life ...). A section is a top-level doc of kind 'section' (migration kagoj_v2_sections widens docs_kind_check); pages live inside it as children, so sync/trash/move work unchanged. Docs.all() and search leave sections out; Docs.sections(), Docs.sectionOf().
+- First run makes "Personal" (id derived from the user id, so every device makes the same one) and moves all top-level pages into the first section; this also catches pages made at the top level later.
+- Section header: tap to collapse, + adds a page, ••• = add page / database / handwritten page / from template, rename, emoji icon, move up/down, delete (not the last one). "Add a section" under the list. Pages can be dragged onto a section header; Move to lists sections. New pages go to the section of the open page, else the last one used. Breadcrumbs start with the section; tapping it reveals the section in the sidebar.
 
 ### 2.3.1 fixes (owner feedback)
 - iPad (iOS 9.3.5): editor bundle failed with "Strict mode does not allow function declarations in a lexically nested statement" (a function declared inside an if in blocks.js). Fixed; ESLint no-inner-declarations added and the build now walks every minified bundle and fails on block-level function declarations.

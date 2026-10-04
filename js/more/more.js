@@ -80,7 +80,7 @@
   K.pageTemplates = function () { return Docs.all().filter(function (d) { return Docs.isLive(d) && isTpl(d); }).sort(function (a, b) { return Docs.titleOf(a) < Docs.titleOf(b) ? -1 : 1; }); };
 
   K.newFromTemplate = function (tpl, parentId) {
-    var c = Docs.duplicate(tpl.id, parentId === undefined ? null : parentId);
+    var c = Docs.duplicate(tpl.id, parentId || K.shell.defaultParent());
     if (!c) { return null; }
     var s = U.copy(c.settings || {}); delete s.pageTemplate;
     Docs.update(c.id, { title: tpl.title, settings: s, favorite: false, position: Docs.positionAt(c.parent_id, null) }, { meta: true });

@@ -28,7 +28,9 @@
     sbOpen: {},
     sbCollapsed: false,
     sbFavOpen: true,
-    sbPagesOpen: true
+    sbPagesOpen: true,
+    sbSecClosed: {},
+    sbLastSection: ''
   };
 
   K.prefs = {
