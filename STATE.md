@@ -3,6 +3,9 @@
 _Last updated: 2026-10-03_
 
 ## Status
+**V2 in progress (local commits, NOT pushed/deployed). Production is still v1.4.** P0 done; P1 (typed pages) code written, builds and passes tests; first browser test found a bug: Markdown block shortcuts (# , - , [] , > ) do not convert while typing (onInput shortcut check in js/editor/editor.js). Next: fix that, finish browser checks of P1 (slash menu, selection toolbar, sidebar drag, mentions, columns, tables), then deploy P1, then P2 databases, P3 calendar, P4 extras (see PLAN.md V2).
+
+### Previous status
 **v1.4 (handwriting to text), v1.3 (floating tool palette) and v1.2 (writing band) on top of v1.1 (Uploads + image placement + palm rejection) is built, tested and pushed; v1 is live at https://kagoj-three.vercel.app.**
 Not yet verified: a real login and sync against Supabase (needs the owner's password), and anything on the physical iPad 2.
 

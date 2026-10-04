@@ -19,7 +19,16 @@
     band: false,
     bandLines: 4,
     paletteOpen: false,
-    palettePos: null
+    palettePos: null,
+    theme: 'light',
+    docFont: 'default',
+    docHeadFont: 'default',
+    docSize: 16,
+    docLine: 1.5,
+    sbOpen: {},
+    sbCollapsed: false,
+    sbFavOpen: true,
+    sbPagesOpen: true
   };
 
   K.prefs = {

@@ -214,6 +214,35 @@
     });
   };
 
+  // Temporary link to a private file (opens in a new tab)
+  sb.storageSign = function (path, cb) {
+    withToken(cb, function (token) {
+      K.xhr({
+        method: 'POST',
+        url: base() + '/storage/v1/object/sign/uploads/' + encPath(path),
+        headers: { apikey: K.config.anonKey, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: { expiresIn: 3600 }, timeout: 20000
+      }, function (err, res) {
+        if (err) { cb(err); return; }
+        var u = res.data && (res.data.signedURL || res.data.signedUrl);
+        if (!u) { cb({ type: 'http', status: 500, message: 'No link' }); return; }
+        cb(null, base() + '/storage/v1' + (u.charAt(0) === '/' ? u : '/' + u));
+      });
+    });
+  };
+
+  // Call one of Kagoj's Supabase Edge Functions as the logged-in user
+  sb.fn = function (name, body, cb) {
+    withToken(cb, function (token) {
+      K.xhr({
+        method: 'POST',
+        url: base() + '/functions/v1/' + name,
+        headers: { apikey: K.config.anonKey, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: body, timeout: 25000
+      }, function (err, res) { cb(err || null, res ? res.data : null); });
+    });
+  };
+
   sb.rpc = function (name, args, cb) {
     sb.rest('POST', 'rpc/' + name, { body: args }, cb);
   };

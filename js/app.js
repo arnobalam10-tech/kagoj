@@ -12,20 +12,22 @@
     root.style.width = window.innerWidth + 'px';
     document.body.classList.toggle('portrait', window.innerHeight > window.innerWidth);
     document.body.classList.toggle('phone', U.isPhone() || window.innerWidth < 600);
+    document.body.classList.toggle('has-touch', !!U.hasTouch);
     app.emit('resize');
   };
 
   app.canUseApp = function () {
-    return K.sb.isLoggedIn() || K.Repo.hasData() || U.lsGet('kagoj.offlineOk', false);
+    return K.sb.isLoggedIn() || K.Repo.hasData() || (K.Docs && K.Docs.all().length > 0) || U.lsGet('kagoj.offlineOk', false);
   };
 
   // Where to go on launch (or after login)
   app.startHash = function (afterLogin) {
     if (!app.canUseApp()) { return '#/login'; }
-    var last = K.Repo.meta('lastOpen', null);
-    if (!afterLogin && K.prefs.get('reopenLast') && last && last.id) {
-      var nb = K.Repo.notebook(last.id);
-      if (nb && !nb.deleted_at) { return '#/nb/' + last.id + '/' + (last.page || 1); }
+    var last = K.Repo.meta('lastRoute', null);
+    if (!afterLogin && K.prefs.get('reopenLast') && last) {
+      var m = /^#\/p\/([^/]+)/.exec(last), n = /^#\/nb\/([^/]+)/.exec(last);
+      if (m && K.Docs.get(m[1]) && K.Docs.isLive(K.Docs.get(m[1]))) { return last; }
+      if (n && K.Repo.notebook(n[1]) && !K.Repo.notebook(n[1]).deleted_at) { return last; }
     }
     return '#/';
   };
@@ -52,11 +54,16 @@
     s.onerror = function () { finish(new Error('Could not load this part of the app. Check the connection.')); };
     document.body.appendChild(s);
   };
+  // several bundles in order
+  app.needAll = function (names, cb) {
+    names = [].concat(names);
+    U.eachSeries(names, function (n, next) { app.need(n, next); }, cb);
+  };
   app.loadExtras = function (cb) { app.need('extra', cb); };
   app.extrasLoaded = function () { return !window.KAGOJ_BUNDLES || !!K.loaded.extra; };
 
   // Which bundle each screen lives in
-  app.screenBundle = { workspace: 'canvas', dashboard: 'canvas', uploads: 'extra', folder: 'extra', settings: 'extra', login: 'extra' };
+  app.screenBundle = { workspace: 'canvas', dashboard: ['extra', 'canvas'], uploads: 'extra', folder: 'extra', settings: 'extra', login: 'extra', trash: 'extra', page: 'editor', calendar: 'cal' };
 
   // Application Cache lets the iOS 9 home-screen app open with no network.
   function watchAppCache() {
@@ -106,20 +113,44 @@
       K.Repo.init(function (err2) {
         if (err2) { fatal('Could not read local data: ' + (err2.message || err2)); return; }
         K.Repo.purgeOld();
-        K.Sync.start();
-        if (U.lsGet('kagoj.debug', false)) { app.need('extra', function () { if (K.debug) { K.debug.show(); } }); }
-        var splash = document.getElementById('splash');
-        if (splash) { D.remove(splash); }
-        if (!location.hash || location.hash === '#' || location.hash === '#/') {
-          var h = app.startHash(false);
-          if (window.history && window.history.replaceState) { window.history.replaceState(null, '', h); }
-          else { location.hash = h; }
-        }
-        K.router.start(root);
-        watchAppCache();
+        K.Docs.init(function (err3) {
+          if (err3) { fatal('Could not read your pages: ' + (err3.message || err3)); return; }
+          K.Docs.purgeOld();
+          start();
+        });
       });
     });
+
+    function start() {
+      K.Theme.apply();
+      K.Sync.start();
+      if (U.lsGet('kagoj.debug', false)) { app.need('extra', function () { if (K.debug) { K.debug.show(); } }); }
+      var splash = document.getElementById('splash');
+      if (splash) { D.remove(splash); }
+      if (!location.hash || location.hash === '#' || location.hash === '#/') {
+        var h = app.startHash(false);
+        if (window.history && window.history.replaceState) { window.history.replaceState(null, '', h); }
+        else { location.hash = h; }
+      }
+      K.router.start(K.shell.build(root));
+      watchAppCache();
+      bindShortcuts();
+    }
   };
+
+  // Keyboard shortcuts that work everywhere (PC)
+  function bindShortcuts() {
+    D.on(document, 'keydown', function (e) {
+      var mod = e.ctrlKey || e.metaKey, k = e.keyCode;
+      if (!mod) { return; }
+      if (k === 80 && !e.shiftKey) { e.preventDefault(); app.search(); }
+      else if (k === 78 && !e.shiftKey && K.router.screenName !== 'workspace') { e.preventDefault(); K.shell.newPage(null); }
+      else if (k === 220) { e.preventDefault(); K.shell.toggle(); }
+      else if (k === 76 && e.shiftKey) { e.preventDefault(); K.Theme.toggle(); }
+      else if (k === 219 && !e.shiftKey && !e.altKey) { e.preventDefault(); window.history.back(); }
+      else if (k === 221 && !e.shiftKey && !e.altKey) { e.preventDefault(); window.history.forward(); }
+    });
+  }
 
   K.app = app;
 

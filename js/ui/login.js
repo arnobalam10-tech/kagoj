@@ -66,5 +66,6 @@
   screen.unmount = function () {};
 
   K.screens = K.screens || {};
+  screen.chrome = false;
   K.screens.login = screen;
 })(window.Kagoj = window.Kagoj || {});

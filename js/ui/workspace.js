@@ -124,7 +124,12 @@
   };
 
   P.backHash = function () {
-    return Repo.isDocument(this.nb) ? '#/up/' + (this.nb.folder_id && Repo.folder(this.nb.folder_id) ? this.nb.folder_id : 'unfiled') : '#/';
+    if (Repo.isDocument(this.nb)) { return '#/up/' + (this.nb.folder_id && Repo.folder(this.nb.folder_id) ? this.nb.folder_id : 'unfiled'); }
+    // a notebook that lives in the page tree goes back to its parent page
+    var self = this, owner = null;
+    K.Docs.all().forEach(function (d) { if (d.kind === 'canvas' && d.settings && d.settings.notebook === self.nb.id && K.Docs.isLive(d)) { owner = d; } });
+    if (owner && owner.parent_id) { return '#/p/' + owner.parent_id; }
+    return owner ? '#/' : '#/notebooks';
   };
 
   P.setToolbarsHidden = function (h) {
@@ -610,5 +615,6 @@
   };
 
   K.screens = K.screens || {};
+  screen.chrome = false;
   K.screens.workspace = screen;
 })(window.Kagoj = window.Kagoj || {});

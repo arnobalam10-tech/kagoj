@@ -33,7 +33,7 @@
   function emitStatus() { S.emit('status', S.status()); }
 
   function pendingCount() {
-    var n = 0;
+    var n = K.Docs ? K.Docs.dirtyCount() : 0;
     U.values(Repo.fds).forEach(function (x) { if (x.dirty && !x.failed) { n++; } });
     U.values(Repo.nbs).forEach(function (x) { if (x.dirty && !x.failed) { n++; } });
     U.values(Repo.pages).forEach(function (x) { if (x.dirty && !x.failed) { n++; } });
@@ -78,11 +78,12 @@
   S.run = function () {
     if (running) { rerun = true; return; }
     if (!sb.isLoggedIn()) { emitStatus(); return; }
+    S.emit('beforeRun');   // open pages save their pending edits first
     running = true;
     rerun = false;
     emitStatus();
     var t0 = Date.now();
-    U.series([pushFolders, pushNotebooks, pushPages, pull, flushLogs, purgeRemote], function (err) {
+    U.series([pushFolders, pushNotebooks, pushPages, pushDocs, pull, pullDocs, flushLogs, purgeRemote], function (err) {
       running = false;
       if (err) {
         failures++;
@@ -114,6 +115,7 @@
 
   function failedItemsText() {
     var f = null;
+    if (K.Docs) { U.values(K.Docs.map).forEach(function (x) { if (x.dirty && x.failed) { f = x.failed; } }); }
     U.values(Repo.fds).forEach(function (x) { if (x.dirty && x.failed) { f = x.failed; } });
     U.values(Repo.nbs).forEach(function (x) { if (x.dirty && x.failed) { f = x.failed; } });
     U.values(Repo.pages).forEach(function (x) { if (x.dirty && x.failed) { f = x.failed; } });
@@ -431,6 +433,126 @@
     });
   }
 
+  // ---------- typed pages (docs) ----------
+
+  var DOC_COLS = 'id,parent_id,kind,title,icon,cover,position,favorite,content,props,schema,settings,revision,created_at,updated_at,deleted_at';
+
+  function docBody(d) {
+    return {
+      id: d.id, parent_id: d.parent_id || null, kind: d.kind, title: d.title || '', icon: d.icon || null,
+      cover: d.cover || null, position: d.position, favorite: !!d.favorite, content: d.content || [],
+      props: d.props || {}, schema: d.schema || null, settings: d.settings || {}, deleted_at: d.deleted_at || null
+    };
+  }
+
+  function docDepth(d) { return K.Docs.path(d.id).length; }
+
+  function docPushed(d, rev, serverRev, body) {
+    d.baseRevision = serverRev;
+    d.synced = true;
+    if (d.revision === rev) { d.dirty = false; }
+    // the base for future merges is what the server now has
+    d.base = JSON.stringify({ content: body.content, title: body.title, props: body.props });
+    K.Store.put('docs', d);
+  }
+
+  // Keep a restorable copy of a page's content (at most every 10 minutes).
+  function snapshot(d, body, cb) {
+    var last = d.verAt || 0;
+    if (!d.contentChanged || Date.now() - last < 600000 || d.kind === 'canvas') { cb(); return; }
+    sb.rest('POST', 'doc_versions', {
+      body: { doc_id: d.id, title: body.title, content: body.content, props: body.props }, prefer: 'return=minimal'
+    }, function () {
+      d.verAt = Date.now();
+      d.contentChanged = false;
+      K.Store.put('docs', d);
+      cb();
+    });
+  }
+
+  function pushDoc(d, retried, cb) {
+    var rev = d.revision, body = docBody(d);
+    function done(serverRev) { docPushed(d, rev, serverRev, body); snapshot(d, body, function () { cb(); }); }
+    if (!d.baseRevision) {
+      body.revision = 1;
+      sb.rest('POST', 'docs?select=id,revision', {
+        body: [body], prefer: 'resolution=merge-duplicates,return=representation', timeout: 45000
+      }, function (err, data) {
+        if (err) { cb(err); return; }
+        done(data && data[0] ? data[0].revision : 1);
+      });
+      return;
+    }
+    body.revision = d.baseRevision + 1;
+    sb.rest('PATCH', 'docs?id=eq.' + d.id + '&revision=eq.' + d.baseRevision + '&select=id,revision', {
+      body: body, prefer: 'return=representation', timeout: 45000
+    }, function (err, data) {
+      if (err) { cb(err); return; }
+      if (data && data.length) { done(data[0].revision); return; }
+      if (retried) { cb({ type: 'http', status: 409, message: 'conflict loop' }); return; }
+      // edited on another device too: merge block by block, then push again
+      sb.rest('GET', 'docs?id=eq.' + d.id + '&select=' + DOC_COLS, { timeout: 45000 }, function (e2, rows) {
+        if (e2) { cb(e2); return; }
+        if (!rows || !rows.length) { d.baseRevision = 0; pushDoc(d, true, cb); return; }
+        var remote = rows[0];
+        var merged = K.Docs.mergeDoc(d, remote);
+        d.content = merged.content;
+        d.title = merged.title;
+        d.props = merged.props;
+        if (!d.deleted_at && remote.deleted_at) { d.deleted_at = null; }
+        d.baseRevision = remote.revision;
+        d.base = JSON.stringify({ content: remote.content, title: remote.title, props: remote.props });
+        d.revision++;
+        K.Store.put('docs', d);
+        K.log.warn('merged edits from two devices on page ' + d.id);
+        K.Docs.emit('change', d.id);
+        S.emit('docMerged', d.id);
+        pushDoc(d, true, cb);
+      });
+    });
+  }
+
+  function pushDocs(cb) {
+    if (!K.Docs) { cb(); return; }
+    var list = U.values(K.Docs.map).filter(function (d) { return d.dirty && !d.failed; });
+    // parents before children (the server checks parent_id)
+    list.sort(function (a, b) { return docDepth(a) - docDepth(b); });
+    U.eachSeries(list, function (d, next) {
+      if (!d.dirty) { next(); return; }
+      var parent = d.parent_id ? K.Docs.get(d.parent_id) : null;
+      if (parent && !parent.synced && parent.dirty) { next(); return; } // parent failed this round
+      pushDoc(d, false, function (err) {
+        if (err && isFatal(err)) { next(err); return; }
+        if (err) { markFailed(d, err, 'docs'); }
+        next();
+      });
+    }, cb);
+  }
+
+  function pullDocs(cb) {
+    if (!K.Docs) { cb(); return; }
+    var changed = false;
+    pullTable('docs', DOC_COLS, 'pullDocs', function (row) {
+      var d = K.Docs.get(row.id);
+      if (d && d.dirty) { return; }       // our edit is pushed (and merged) first
+      if (d && row.revision === d.baseRevision && d.synced) { return; }
+      d = d || { id: row.id };
+      U.extend(d, row);
+      d.baseRevision = row.revision;
+      d.revision = row.revision;
+      d.synced = true;
+      d.dirty = false;
+      K.Docs.snapshotBase(d);
+      K.Docs.map[d.id] = d;
+      K.Store.put('docs', d);
+      changed = true;
+      S.emit('remoteDoc', d.id);
+    }, function (err) {
+      if (changed) { K.Docs.emit('change', 'pull'); }
+      cb(err);
+    });
+  }
+
   function purgeRemote(cb) {
     var last = Repo.meta('purgeAt', 0);
     if (Date.now() - last < 86400000) { cb(); return; }
@@ -457,9 +579,12 @@
       sb.rest('DELETE', 'pages' + q, { prefer: 'return=minimal' }, function () {
         sb.rest('DELETE', 'notebooks' + q, { prefer: 'return=minimal' }, function () {
           sb.rest('DELETE', 'folders' + q, { prefer: 'return=minimal' }, function () {
-            Repo.setMeta('purgeAt', Date.now());
-            Repo.purgeOld();
-            cb();
+            sb.rest('DELETE', 'docs' + q, { prefer: 'return=minimal' }, function () {
+              Repo.setMeta('purgeAt', Date.now());
+              Repo.purgeOld();
+              if (K.Docs) { K.Docs.purgeOld(); }
+              cb();
+            });
           });
         });
       });
@@ -468,6 +593,7 @@
 
   // Re-try items that failed with a 4xx after the user taps "retry".
   S.retryFailed = function () {
+    if (K.Docs) { U.values(K.Docs.map).forEach(function (x) { x.failed = null; }); }
     U.values(Repo.fds).forEach(function (x) { x.failed = null; });
     U.values(Repo.nbs).forEach(function (x) { x.failed = null; });
     U.values(Repo.pages).forEach(function (x) { x.failed = null; });

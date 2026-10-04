@@ -11,7 +11,7 @@ var ROOT = path.resolve(__dirname, '..');
 
 // ---------------- mock server ----------------
 var server = {
-  tables: { notebooks: [], pages: [], client_logs: [], folders: [] },
+  tables: { notebooks: [], pages: [], client_logs: [], folders: [], docs: [], doc_versions: [] },
   storage: {}, removed: [],
   clock: Date.UTC(2026, 9, 3, 10, 0, 0),
   tokens: {}, refreshCount: 0, online: true, n: 0
@@ -47,6 +47,8 @@ function pick(row, sel) {
 var DEFAULTS = {
   notebooks: function () { return { title: 'Untitled notebook', cover_color: '#2F3640', default_paper: 'ruled', page_count: 0, last_opened_at: null, deleted_at: null, kind: 'notebook', folder_id: null, source_name: null }; },
   folders: function () { return { name: 'New folder', position: 0, deleted_at: null }; },
+  docs: function () { return { parent_id: null, kind: 'page', title: '', icon: null, cover: null, position: 0, favorite: false, content: [], props: {}, schema: null, settings: {}, revision: 1, deleted_at: null }; },
+  doc_versions: function () { return {}; },
   pages: function () { return { paper: 'ruled', drawing: { v: 1, w: 1000, h: 1414, strokes: [] }, revision: 1, label: null, background_asset: null, deleted_at: null }; },
   client_logs: function () { return {}; }
 };
@@ -148,7 +150,7 @@ function mockXhr(opts, cb) {
 
 // ---------------- devices ----------------
 var FILES = ['js/config.js', 'js/core/util.js', 'js/core/dom.js', 'js/core/log.js', 'js/net/xhr.js', 'js/net/supabase.js',
-  'js/store/idb.js', 'js/store/ls.js', 'js/store/store.js', 'js/store/repo.js', 'js/store/assets.js',
+  'js/core/prefs.js', 'js/store/idb.js', 'js/store/ls.js', 'js/store/store.js', 'js/store/repo.js', 'js/store/docs.js', 'js/store/assets.js',
   'js/draw/geometry.js', 'js/draw/codec.js', 'js/sync/sync.js'];
 
 function device(name, ua) {
@@ -187,6 +189,7 @@ function sync(K) {
 async function boot(K) {
   await cb2p(function (cb) { K.Store.init(cb); });
   await cb2p(function (cb) { K.Repo.init(cb); });
+  await cb2p(function (cb) { K.Docs.init(cb); });
 }
 function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 function stroke(K, x, id) {
@@ -390,6 +393,66 @@ async function test(name, fn) {
     assert.ok(!server.storage[uid + '/' + lone + '/t001.jpg']);
     assert.ok(server.storage[uid + '/' + docId + '/p001.jpg'], 'files still used by a notebook page are kept');
     assert.strictEqual(server.tables.notebooks.filter(function (n) { return n.id === lone; }).length, 0);
+  });
+
+  console.log('typed pages (V2)');
+  var pageId, childId;
+  await test('pages and sub-pages sync; parents are pushed before children', async function () {
+    var p = A.Docs.create({ title: 'Course notes', content: [A.Docs.newBlock('h1', { html: 'Week 1' }), A.Docs.newBlock('p', { html: 'Cells' })] });
+    var c = A.Docs.create({ parent_id: p.id, title: 'Lecture 1' });
+    pageId = p.id; childId = c.id;
+    await flushWrites(A);
+    assert.ifError(await sync(A));
+    assert.strictEqual(server.tables.docs.length, 2);
+    assert.ifError(await sync(B));
+    var bp = B.Docs.get(pageId);
+    assert.strictEqual(bp.title, 'Course notes');
+    assert.strictEqual(bp.content[0].html, 'Week 1');
+    assert.strictEqual(B.Docs.treeChildren(pageId)[0].id, childId);
+    assert.strictEqual(server.tables.doc_versions.length >= 1, true);
+  });
+  await test('edits on two devices merge block by block (no conflict copy needed)', async function () {
+    var a = A.Docs.get(pageId), b = B.Docs.get(pageId);
+    a.content[0].html = 'Week 1 (updated on iPad)';
+    A.Docs.save(a);
+    b.content[1].html = 'Cells and tissues';
+    b.content.push(B.Docs.newBlock('p', { id: 'bnewfrompc', html: 'Added on PC' }));
+    B.Docs.save(b);
+    await flushWrites(A); await flushWrites(B);
+    assert.ifError(await sync(A));
+    assert.ifError(await sync(B));      // revision moved: B merges
+    assert.ifError(await sync(A));
+    var htmls = A.Docs.get(pageId).content.map(function (x) { return x.html; });
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(htmls)), ['Week 1 (updated on iPad)', 'Cells and tissues', 'Added on PC']);
+    var server = JSON.parse(JSON.stringify(B.Docs.get(pageId).content.map(function (x) { return x.html; })));
+    assert.deepStrictEqual(server, ['Week 1 (updated on iPad)', 'Cells and tissues', 'Added on PC']);
+  });
+  await test('the same block edited on both devices keeps both versions', async function () {
+    var a = A.Docs.get(pageId), b = B.Docs.get(pageId);
+    a.content[1].html = 'iPad version';
+    A.Docs.save(a);
+    b.content[1].html = 'PC version';
+    B.Docs.save(b);
+    await flushWrites(A); await flushWrites(B);
+    assert.ifError(await sync(A));
+    assert.ifError(await sync(B));
+    var list = B.Docs.get(pageId).content;
+    var texts = list.map(function (x) { return x.html; });
+    assert.ok(texts.indexOf('iPad version') >= 0 && texts.indexOf('PC version') >= 0, texts.join('|'));
+    assert.strictEqual(list.filter(function (x) { return x.conflict; }).length, 1);
+  });
+  await test('trash: deleting a page hides its sub-pages; restore brings them back', async function () {
+    A.Docs.remove(pageId);
+    await flushWrites(A);
+    assert.ifError(await sync(A));
+    assert.ifError(await sync(B));
+    assert.ok(!B.Docs.isLive(B.Docs.get(childId)));
+    assert.strictEqual(B.Docs.trash().length, 1);
+    B.Docs.restore(pageId);
+    await flushWrites(B);
+    assert.ifError(await sync(B));
+    assert.ifError(await sync(A));
+    assert.ok(A.Docs.isLive(A.Docs.get(childId)));
   });
 
   console.log('deletes, offline, auth');

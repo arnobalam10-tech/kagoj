@@ -11,11 +11,15 @@
     if (parts[0] === 'login') { return { name: 'login' }; }
     if (parts[0] === 'settings') { return { name: 'settings' }; }
     if (parts[0] === 'uploads') { return { name: 'uploads' }; }
+    if (parts[0] === 'p' && parts[1]) { return { name: 'page', id: parts[1] }; }
+    if (parts[0] === 'notebooks') { return { name: 'dashboard' }; }
+    if (parts[0] === 'trash') { return { name: 'trash' }; }
+    if (parts[0] === 'calendar') { return { name: 'calendar', view: parts[1] || null, date: parts[2] || null }; }
     if (parts[0] === 'up' && parts[1]) { return { name: 'folder', id: parts[1] }; }
     if (parts[0] === 'nb' && parts[1]) {
       return { name: 'workspace', id: parts[1], page: Math.max(1, parseInt(parts[2], 10) || 1) };
     }
-    return { name: 'dashboard' };
+    return { name: 'home' };
   };
 
   router.go = function (hash) {
@@ -40,7 +44,7 @@
     if (r.name !== 'login' && !K.app.canUseApp()) { router.go('#/login'); return; }
     var screen = K.screens[r.name];
     if (!screen) {
-      K.app.need(K.app.screenBundle[r.name] || 'extra', function (err) {
+      K.app.needAll(K.app.screenBundle[r.name] || 'extra', function (err) {
         if (!err && !K.screens[r.name]) { err = new Error('This screen is missing (' + r.name + ').'); }
         if (err) { K.sheets.toast(err.message, 5000); return; }
         router.handle();
@@ -56,12 +60,14 @@
       try { router.current.unmount(); } catch (e) { K.log.error(e); }
     }
     D.empty(router.root);
+    if (K.shell) { K.shell.chrome(screen.chrome !== false); }
     var host = D.el('div.screen.screen-' + r.name);
     router.root.appendChild(host);
     router.screenName = r.name;
     router.current = screen;
     var cls = document.body.className.replace(/(^|\s)on-[a-z]+/g, '').replace(/^\s+|\s+$/g, '');
     document.body.className = (cls ? cls + ' ' : '') + 'on-' + r.name;
+    if (r.name === 'page' || r.name === 'workspace') { K.Repo.setMeta('lastRoute', location.hash); }
     try {
       screen.mount(host, r);
     } catch (e2) {

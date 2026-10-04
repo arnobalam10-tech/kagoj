@@ -196,9 +196,7 @@
   }
 
   screen.mount = function (root) {
-    var back = D.button({ icon: 'back', label: 'Notebooks', cls: 'back-btn' });
-    D.tap(back, function () { K.router.go('#/'); });
-    var top = D.el('header.topbar', null, [back, D.el('div.top-title', { text: 'Settings' }), D.el('div.spacer')]);
+    var top = D.el('header.topbar.doc-top', null, [K.shell.menuButton(), D.el('div.top-title', { text: 'Settings' }), D.el('div.spacer')]);
     var body = D.el('div.set-body');
     D.append(root, [top, D.el('div.dash-scroll.scrolls', null, body)]);
     st = { body: body, onStatus: function () {}, onChange: U.debounce(render, 300) };

@@ -4,8 +4,8 @@
   // IndexedDB adapter. Every store is keyed by `id`.
   // One object store per transaction: multi-store transactions were buggy on
   // early iOS IndexedDB, so we avoid them entirely.
-  var STORES = ['notebooks', 'pages', 'drawings', 'meta', 'folders', 'assets'];
-  var VERSION = 2;
+  var STORES = ['notebooks', 'pages', 'drawings', 'meta', 'folders', 'assets', 'docs'];
+  var VERSION = 3;
 
   function IdbAdapter() { this.db = null; this.name = 'indexeddb'; }
 

@@ -31,15 +31,4 @@
     pill.destroy = function () { K.Sync.off('status', h); };
     return pill;
   };
-
-  // Notebooks | Uploads switch shown in the top bar of both sections
-  K.mainTabs = function (active) {
-    var wrap = D.el('div.segmented.main-tabs');
-    [['notebooks', 'Notebooks', '#/'], ['uploads', 'Uploads', '#/uploads']].forEach(function (t) {
-      var b = D.el('button.seg' + (t[0] === active ? '.selected' : ''), { type: 'button', text: t[1] });
-      D.tap(b, function () { if (t[0] !== active) { K.router.go(t[2]); } });
-      wrap.appendChild(b);
-    });
-    return wrap;
-  };
 })(window.Kagoj = window.Kagoj || {});

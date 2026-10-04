@@ -153,12 +153,7 @@
 
   function topBar(active) {
     var pill = K.statusPill();
-    var settingsBtn = D.button({ icon: 'settings', title: 'Settings' });
-    D.tap(settingsBtn, function () { K.router.go('#/settings'); });
-    var top = D.el('header.topbar', null, [
-      D.el('div.wordmark', null, [D.el('span.wm-en', { text: 'Kagoj' }), D.el('span.wm-bn', { text: 'কাগজ' })]),
-      K.mainTabs(active), D.el('div.spacer'), pill, settingsBtn
-    ]);
+    var top = D.el('header.topbar.doc-top', null, [K.shell.menuButton(), D.el('div.top-title', { text: 'Uploads' }), D.el('div.spacer'), pill]);
     return { el: top, pill: pill };
   }
 

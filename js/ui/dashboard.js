@@ -233,12 +233,7 @@
 
   screen.mount = function (root) {
     var pill = K.statusPill();
-    var settingsBtn = D.button({ icon: 'settings', title: 'Settings' });
-    D.tap(settingsBtn, function () { K.router.go('#/settings'); });
-    var top = D.el('header.topbar', null, [
-      D.el('div.wordmark', null, [D.el('span.wm-en', { text: 'Kagoj' }), D.el('span.wm-bn', { text: 'কাগজ' })]),
-      K.mainTabs('notebooks'), D.el('div.spacer'), pill, settingsBtn
-    ]);
+    var top = D.el('header.topbar.doc-top', null, [K.shell.menuButton(), D.el('div.top-title', { text: 'Handwritten notebooks' }), D.el('div.spacer'), pill]);
     var search = D.el('input.search', {
       type: 'search', placeholder: 'Search notebooks', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false'
     });
