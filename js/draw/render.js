@@ -90,9 +90,43 @@
       }
       ctx.restore();
     }
+    if (extras && extras.texts) { R.drawTexts(ctx, vp, dpr, extras.texts); }
   };
 
   R.drawImg = drawImg;
+
+  var FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  // Wrap text to t.w; sets t.h. ctx must be in page units.
+  R.layoutText = function (ctx, t) {
+    ctx.font = t.s + 'px ' + FONT;
+    var out = [], paras = String(t.t).split('\n');
+    for (var p = 0; p < paras.length; p++) {
+      var words = paras[p].split(' '), line = '';
+      for (var i = 0; i < words.length; i++) {
+        var test = line ? line + ' ' + words[i] : words[i];
+        if (line && ctx.measureText(test).width > t.w) { out.push(line); line = words[i]; }
+        else { line = test; }
+      }
+      out.push(line);
+    }
+    t.lines = out;
+    t.h = Math.max(1, out.length) * t.s * 1.3;
+    return out;
+  };
+
+  R.drawTexts = function (ctx, vp, dpr, texts) {
+    if (!texts || !texts.length) { return; }
+    ctx.save();
+    R.pageTransform(ctx, vp, dpr);
+    R.clipToPage(ctx, vp);
+    ctx.textBaseline = 'top';
+    for (var i = 0; i < texts.length; i++) {
+      var t = texts[i], lines = R.layoutText(ctx, t);
+      ctx.fillStyle = t.c || '#1F1F1F';
+      for (var k = 0; k < lines.length; k++) { ctx.fillText(lines[k], t.x, t.y + k * t.s * 1.3 + t.s * 0.12); }
+    }
+    ctx.restore();
+  };
 
   R.pattern = function (ctx, vp, style, dpr, pat) {
     var x = vp.ox, y = vp.oy, pw = vp.pw * vp.scale, ph = vp.ph * vp.scale;

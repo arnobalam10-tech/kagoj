@@ -3,7 +3,7 @@
 _Last updated: 2026-10-03_
 
 ## Status
-**v1.3 (floating tool palette) and v1.2 (writing band) on top of v1.1 (Uploads + image placement + palm rejection) is built, tested and pushed; v1 is live at https://kagoj-three.vercel.app.**
+**v1.4 (handwriting to text), v1.3 (floating tool palette) and v1.2 (writing band) on top of v1.1 (Uploads + image placement + palm rejection) is built, tested and pushed; v1 is live at https://kagoj-three.vercel.app.**
 Not yet verified: a real login and sync against Supabase (needs the owner's password), and anything on the physical iPad 2.
 
 ## Infrastructure
@@ -48,8 +48,16 @@ Not yet verified: a real login and sync against Supabase (needs the owner's pass
 - Palette touches never reach the drawing surface. "Hide toolbars" became "Hide top bar"; the restore button sits top-right.
 - Verified in the browser: open/close, drag to top-right (panel flips to below-left), tool change, drawing, position and tool persist after reload. Bundles: startup 114.5 KB / 120, CSS 17.2 KB / 20.
 
+## Done — v1.4 (handwriting to text)
+- **Lasso tool** (palette, last tool): draw a loop; pen strokes with ≥60% of their points inside are picked (dashed box). Bar: "Convert N strokes to text" / Cancel. ⋯ → "Convert page handwriting to text…" picks every pen stroke on the page.
+- Recognition: strokes grouped into lines (overlap clustering; dots/commas join their line), one request per line to Google's handwriting-input service (`inputtools.google.com`, free, unofficial, CORS `*`, certificate chain ends at GlobalSign Root CA so iOS 9 should trust it). English. Needs internet; only stroke coordinates are sent.
+- Preview dialog with editable text → **Replace**: the strokes are removed and a typed text box is placed at the same spot (size ≈ ⅔ of the handwriting line height, same ink colour). One undo step restores the handwriting.
+- Typed text is a page object (drawing JSON `texts`, synced like everything else), drawn under the ink. Select tool: move, resize (font scales), **Edit text** (multi-line dialog), Delete; all undoable.
+- Verified against the real Google service in the browser: synthetic "hello" → "hello"; "hi"×2 → "hihi"; replace, undo/redo, lasso of part of a page, select + edit text, saved to the page.
+- Login screen moved into the background bundle to keep startup JS at 119.7 KB / 120 (**the startup budget is now full**; further features should go in the extra bundle). Extra bundle 36.6 KB / 60, CSS 17.4 KB / 20.
+
 ## Tests (run inside `npm run build`; a failure blocks deploy)
-- `scripts/test.js`: 24 unit tests (incl. writing band) (geometry, codec incl. page size + images, eraser, history incl. image ops, viewport incl. landscape pages, palm rejection input logic)
+- `scripts/test.js`: 29 unit tests (incl. writing band, handwriting line grouping, request/response format, typed-text codec, convert undo) (geometry, codec incl. page size + images, eraser, history incl. image ops, viewport incl. landscape pages, palm rejection input logic)
 - `scripts/sync-test.js`: 18 integration tests, two simulated devices against a mock Supabase (REST, RPC, Storage): push/pull, lazy download, revision guard, conflict copy, folders + documents, document writing sync, import into notebook, folder delete/restore, purge keeps shared files, soft delete, offline retry, 401 refresh, masked logs
 - Browser (dev build + in-page Storage stand-in): 3-page PDF upload (portrait/landscape/portrait), photo upload, document opens with background, writing on it saves, slide page is landscape, import picker, place image, move, resize, undo, delete, add as new pages, wrist guard with synthetic multi-touch
 
@@ -78,5 +86,6 @@ Not yet verified: a real login and sync against Supabase (needs the owner's pass
 3. **iPad 2:** open https://kagoj-three.vercel.app/spike/ in Safari. If it says "Cannot Verify Server Identity", install the **GTS Root R1** certificate (from pki.goog) as a profile: Settings → General → Profiles. Then run both test buttons, Add to Home Screen, log in inside the home-screen app.
 
 ## Known issues / limits
+- Handwriting recognition uses an unofficial Google endpoint: free and accurate for English, but it could change or stop without notice. If it breaks, the fallback plan is Claude via a Supabase Edge Function (needs an API key).
 - iOS 9 does not apply photo EXIF rotation when drawing to canvas; a sideways photo taken on an iPhone may upload rotated when uploaded from the iPad 2 (PC/phone uploads are fine).
 - pdf.js 3.11 is the last version that runs in older desktop/phone browsers via a plain script tag; the font-eval CVE is mitigated with `isEvalSupported:false`.

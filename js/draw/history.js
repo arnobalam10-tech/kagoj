@@ -30,9 +30,36 @@
     return -1;
   }
 
+  function objList(op, imgs, texts) { return op.kind === 'text' ? texts : imgs; }
+  function copyFields(dst, src) { for (var k in src) { if (Object.prototype.hasOwnProperty.call(src, k)) { dst[k] = src[k]; } } }
+
   // Each returns { dirty: rect|null, full: bool, paper: bool }
-  function apply(op, strokes, forward, imgs) {
-    var i, st, dirty = null;
+  function apply(op, strokes, forward, imgs, texts) {
+    var i, st, dirty = null, list;
+    if (op.type === 'obj-set') {
+      list = objList(op, imgs, texts);
+      i = imgIndex(list, op.id);
+      if (i >= 0) { copyFields(list[i], forward ? op.after : op.before); }
+      return { dirty: null, full: false, paper: true };
+    }
+    if (op.type === 'obj-del') {
+      list = objList(op, imgs, texts);
+      if (forward) { i = imgIndex(list, op.obj.id); if (i >= 0) { list.splice(i, 1); } }
+      else { list.splice(Math.min(op.i, list.length), 0, op.obj); }
+      return { dirty: null, full: false, paper: true };
+    }
+    if (op.type === 'convert') {
+      // handwriting -> typed text: strokes removed, one text added
+      if (forward) {
+        for (i = 0; i < op.steps.length; i++) { st = op.steps[i]; strokes.splice(st.i, 1); }
+        texts.push(op.text);
+      } else {
+        i = imgIndex(texts, op.text.id);
+        if (i >= 0) { texts.splice(i, 1); }
+        for (i = op.steps.length - 1; i >= 0; i--) { st = op.steps[i]; strokes.splice(st.i, 0, st.removed); }
+      }
+      return { dirty: null, full: true, paper: true };
+    }
     if (op.type === 'img-add') {
       for (i = 0; i < op.imgs.length; i++) {
         var k = imgIndex(imgs, op.imgs[i].id);
@@ -85,18 +112,18 @@
     return { dirty: null, full: true };
   }
 
-  History.prototype.undo = function (strokes, imgs) {
+  History.prototype.undo = function (strokes, imgs, texts) {
     var op = this.undos.pop();
     if (!op) { return null; }
     this.redos.push(op);
-    return apply(op, strokes, false, imgs || []);
+    return apply(op, strokes, false, imgs || [], texts || []);
   };
 
-  History.prototype.redo = function (strokes, imgs) {
+  History.prototype.redo = function (strokes, imgs, texts) {
     var op = this.redos.pop();
     if (!op) { return null; }
     this.undos.push(op);
-    return apply(op, strokes, true, imgs || []);
+    return apply(op, strokes, true, imgs || [], texts || []);
   };
 
   K.History = History;

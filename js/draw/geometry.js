@@ -104,5 +104,15 @@
     return s;
   };
 
+  // Ray casting; poly is a flat [x0, y0, x1, y1, ...] list.
+  G.inPoly = function (px, py, poly) {
+    var inside = false, n = poly.length / 2;
+    for (var i = 0, j = n - 1; i < n; j = i++) {
+      var xi = poly[i * 2], yi = poly[i * 2 + 1], xj = poly[j * 2], yj = poly[j * 2 + 1];
+      if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) { inside = !inside; }
+    }
+    return inside;
+  };
+
   K.geom = G;
 })(window.Kagoj = window.Kagoj || {});

@@ -332,3 +332,6 @@ button { font: inherit; color: inherit; }
 .pal-row .btn { margin: 0 1px; }
 .phone .pal-panel .btn { min-width: 40px; padding: 0 6px; }
 .phone .pal-panel .zoom-label, .phone .pal-panel .page-label { min-width: 48px; }
+
+.phone .sel-bar { left: 10px; right: 10px; min-width: 0; -webkit-transform: none; transform: none; white-space: normal; }
+.sel-bar { width: auto; min-width: 280px; -webkit-transform: translateX(-50%); transform: translateX(-50%); margin-left: 0; white-space: nowrap; }

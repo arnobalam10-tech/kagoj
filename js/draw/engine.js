@@ -13,6 +13,9 @@
     this.dpr = U.dpr();
     this.strokes = [];
     this.imgs = [];          // placed images {id, a, x, y, w, h}
+    this.texts = [];         // typed text {id, x, y, w, s, c, t}
+    this.lasso = null;       // lasso being drawn
+    this.picked = null;      // stroke ids picked by the lasso
     this.bgPath = null;      // page background (uploaded PDF page / photo)
     this.assets = {};        // path -> HTMLImageElement | 'error'
     this.history = new K.History();
@@ -64,6 +67,8 @@
     this.pageId = pageId;
     this.strokes = K.codec.decode(drawing);
     this.imgs = K.codec.decodeImgs(drawing);
+    this.texts = K.codec.decodeTexts(drawing);
+    this.picked = null;
     this.vp.pw = (drawing && drawing.w) || K.config.pageW;
     this.vp.ph = (drawing && drawing.h) || K.config.pageH;
     this.bgPath = (opts && opts.bg) || null;
@@ -104,6 +109,7 @@
   P.setTool = function (t) {
     U.extend(this.tool, t);
     if (this.tool.tool !== 'select') { this.setSelection(null); }
+    if (this.tool.tool !== 'lasso' && this.picked) { this.setPicked(null); }
     this.clearLive();
     if (this.sel) { this.drawSelection(); }
     if (this.opts.onCursor) { this.opts.onCursor(this.tool.tool); }
@@ -111,7 +117,7 @@
 
   P.setReadOnly = function (b) { this.readOnly = !!b; this.cancel(); this.setSelection(null); this.positionBand(); };
 
-  P.getDrawing = function () { return K.codec.encode(this.strokes, this.vp.pw, this.vp.ph, this.imgs); };
+  P.getDrawing = function () { return K.codec.encode(this.strokes, this.vp.pw, this.vp.ph, this.imgs, this.texts); };
 
   P.updateStats = function () {
     var pts = 0;
@@ -152,7 +158,9 @@
       if (m.id === hide) { continue; }
       imgs.push({ x: m.x, y: m.y, w: m.w, h: m.h, img: self.assets[m.a] || null });
     }
-    return { bg: this.bgPath ? { img: this.assets[this.bgPath] || null } : null, imgs: imgs };
+    var texts = [];
+    for (var j = 0; j < this.texts.length; j++) { if (this.texts[j].id !== hide) { texts.push(this.texts[j]); } }
+    return { bg: this.bgPath ? { img: this.assets[this.bgPath] || null } : null, imgs: imgs, texts: texts };
   };
 
   P.renderPaper = function () {
@@ -167,6 +175,7 @@
     R.layer(this.x.ink, this.vp, this.dpr, this.strokes, 'p', null);
     this.clearLive();
     if (this.sel) { this.drawSelection(); }
+    if (this.picked) { this.drawLasso(); }
     this.positionBand();
     K.stats.renderMs = Math.round(U.perfNow() - t0);
     if (this.opts.onView) { this.opts.onView(this.vp.zoomPct()); }
@@ -204,6 +213,7 @@
     this.lastFrameT = t0;
     if (this.cur) { this.drawLive(); }
     else if (this.drag) { this.drawSelection(); }
+    else if (this.lasso) { this.drawLasso(); }
     else if (this.erase || this.hoverPt) { this.drawEraserCursor(); }
     else if (this.pinch && this.pinch.k !== undefined) { this.applyCss(this.pinch.tx, this.pinch.ty, this.pinch.k); }
     else if (this.panState) { this.applyCss(this.panState.dx, this.panState.dy, 1); }
@@ -276,18 +286,32 @@
     x.stroke();
   };
 
-  // ---------- placed images: selection ----------
+  // ---------- placed objects (images + typed text): selection ----------
 
-  P.imgById = function (id) {
-    for (var i = 0; i < this.imgs.length; i++) { if (this.imgs[i].id === id) { return this.imgs[i]; } }
+  // Returns { obj, kind: 'img'|'text', list } or null
+  P.findObj = function (id) {
+    var i;
+    for (i = 0; i < this.imgs.length; i++) { if (this.imgs[i].id === id) { return { obj: this.imgs[i], kind: 'img', list: this.imgs, i: i }; } }
+    for (i = 0; i < this.texts.length; i++) { if (this.texts[i].id === id) { return { obj: this.texts[i], kind: 'text', list: this.texts, i: i }; } }
     return null;
+  };
+  P.imgById = function (id) { var f = this.findObj(id); return f ? f.obj : null; };
+
+  // Height of a text box depends on wrapping; measure on demand.
+  P.textHeight = function (t) {
+    if (!t.h) { R.layoutText(this.x.paper, t); }
+    return t.h || t.s * 1.3;
+  };
+  P.objRect = function (o) {
+    return { x: o.x, y: o.y, w: o.w, h: o.a ? o.h : this.textHeight(o) };
   };
 
   P.setSelection = function (id) {
     if (this.sel === id) { return; }
     this.sel = id;
     if (!id) { this.clearLive(); } else { this.drawSelection(); }
-    if (this.opts.onSelect) { this.opts.onSelect(id); }
+    var f = id ? this.findObj(id) : null;
+    if (this.opts.onSelect) { this.opts.onSelect(id, f ? f.kind : null); }
   };
 
   // Screen rect of a page-space rect
@@ -298,17 +322,24 @@
 
   P.drawSelection = function () {
     this.clearLive();
-    var m = this.drag ? this.drag.rect : this.imgById(this.sel);
-    if (!m) { return; }
+    var f = this.findObj(this.drag ? this.drag.id : this.sel);
+    if (!f) { return; }
+    var m = this.drag ? this.drag.rect : this.objRect(f.obj);
     var x = this.x.live;
-    x.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     var r = this.screenRect(m);
     if (this.drag) {
-      var src = this.imgById(this.drag.id);
-      x.globalAlpha = 0.85;
-      R.drawImg(x, { img: src ? this.assets[src.a] : null }, r.x, r.y, r.w, r.h);
-      x.globalAlpha = 1;
+      if (f.kind === 'img') {
+        x.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        x.globalAlpha = 0.85;
+        R.drawImg(x, { img: this.assets[f.obj.a] }, r.x, r.y, r.w, r.h);
+        x.globalAlpha = 1;
+      } else {
+        var t = { x: m.x, y: m.y, w: m.w, s: this.drag.size, c: f.obj.c, t: f.obj.t };
+        R.drawTexts(x, this.vp, this.dpr, [t]);
+        r = this.screenRect({ x: t.x, y: t.y, w: t.w, h: t.h });
+      }
     }
+    x.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     x.lineWidth = 2;
     x.strokeStyle = '#2F5DA8';
     x.strokeRect(Math.round(r.x) + 0.5, Math.round(r.y) + 0.5, Math.round(r.w), Math.round(r.h));
@@ -320,10 +351,13 @@
     x.stroke();
   };
 
-  P.hitImage = function (sx, sy) {
-    for (var i = this.imgs.length - 1; i >= 0; i--) {
-      var r = this.screenRect(this.imgs[i]);
-      if (sx >= r.x && sx <= r.x + r.w && sy >= r.y && sy <= r.y + r.h) { return this.imgs[i]; }
+  P.hitObj = function (sx, sy) {
+    var lists = [this.texts, this.imgs]; // text sits above images
+    for (var k = 0; k < lists.length; k++) {
+      for (var i = lists[k].length - 1; i >= 0; i--) {
+        var r = this.screenRect(this.objRect(lists[k][i]));
+        if (sx >= r.x - 4 && sx <= r.x + r.w + 4 && sy >= r.y - 4 && sy <= r.y + r.h + 4) { return lists[k][i]; }
+      }
     }
     return null;
   };
@@ -331,21 +365,22 @@
   P.selectDown = function (sx, sy) {
     var cur = this.imgById(this.sel);
     if (cur) {
-      var r = this.screenRect(cur);
+      var r = this.screenRect(this.objRect(cur));
       if (Math.abs(sx - (r.x + r.w)) < HANDLE && Math.abs(sy - (r.y + r.h)) < HANDLE) {
         this.startDrag(cur, 'resize', sx, sy);
         return;
       }
     }
-    var hit = this.hitImage(sx, sy);
+    var hit = this.hitObj(sx, sy);
     if (!hit) { this.setSelection(null); return; }
     this.setSelection(hit.id);
     this.startDrag(hit, 'move', sx, sy);
   };
 
   P.startDrag = function (m, mode, sx, sy) {
-    this.drag = { id: m.id, mode: mode, sx: sx, sy: sy, r0: { x: m.x, y: m.y, w: m.w, h: m.h }, rect: { x: m.x, y: m.y, w: m.w, h: m.h }, moved: false };
-    this.renderPaper(); // without the dragged image; it follows the finger on the live layer
+    var r = this.objRect(m);
+    this.drag = { id: m.id, mode: mode, sx: sx, sy: sy, r0: r, rect: { x: r.x, y: r.y, w: r.w, h: r.h }, size: m.s, moved: false };
+    this.renderPaper(); // without the dragged object; it follows the finger on the live layer
     this.drawSelection();
   };
 
@@ -360,6 +395,8 @@
       var w = Math.max(40, d.r0.w + dx);
       d.rect.w = w;
       d.rect.h = w * d.r0.h / d.r0.w;
+      var f = this.findObj(d.id);
+      if (f && f.kind === 'text') { d.size = Math.max(8, f.obj.s * w / d.r0.w); }
     }
     this.requestFrame();
   };
@@ -367,11 +404,19 @@
   P.endDrag = function () {
     var d = this.drag;
     this.drag = null;
-    var m = this.imgById(d.id);
-    if (m && d.moved) {
-      var before = d.r0, after = { x: d.rect.x, y: d.rect.y, w: d.rect.w, h: d.rect.h };
-      m.x = after.x; m.y = after.y; m.w = after.w; m.h = after.h;
-      this.history.push({ type: 'img-set', id: m.id, before: before, after: after });
+    var f = this.findObj(d.id);
+    if (f && d.moved) {
+      var m = f.obj, before, after;
+      if (f.kind === 'img') {
+        before = { x: d.r0.x, y: d.r0.y, w: d.r0.w, h: d.r0.h };
+        after = { x: d.rect.x, y: d.rect.y, w: d.rect.w, h: d.rect.h };
+      } else {
+        before = { x: m.x, y: m.y, w: m.w, s: m.s };
+        after = { x: d.rect.x, y: d.rect.y, w: d.rect.w, s: d.size };
+        m.h = 0;
+      }
+      U.extend(m, after);
+      this.history.push({ type: 'obj-set', kind: f.kind, id: m.id, before: before, after: after });
       this.changed();
     }
     this.renderPaper();
@@ -399,17 +444,123 @@
   };
 
   P.deleteSelected = function () {
-    var id = this.sel;
-    if (!id) { return; }
-    for (var i = 0; i < this.imgs.length; i++) {
-      if (this.imgs[i].id === id) {
-        var img = this.imgs.splice(i, 1)[0];
-        this.history.push({ type: 'img-del', img: img, i: i });
-        break;
-      }
-    }
+    var f = this.sel ? this.findObj(this.sel) : null;
+    if (!f) { return; }
+    f.list.splice(f.i, 1);
+    this.history.push({ type: 'obj-del', kind: f.kind, obj: f.obj, i: f.i });
     this.setSelection(null);
     this.renderPaper();
+    this.changed();
+  };
+
+  // Change the words of the selected typed text
+  P.editText = function (id, text) {
+    var f = this.findObj(id);
+    if (!f || f.kind !== 'text' || f.obj.t === text) { return; }
+    this.history.push({ type: 'obj-set', kind: 'text', id: id, before: { t: f.obj.t }, after: { t: text } });
+    f.obj.t = text;
+    f.obj.h = 0;
+    this.renderPaper();
+    this.drawSelection();
+    this.changed();
+  };
+
+  // ---------- lasso (select handwriting to convert) ----------
+
+  P.lassoMove = function (sx, sy) {
+    var L = this.lasso, pt = this.vp.toPage(sx, sy), n = L.pts.length;
+    var dx = pt.x - L.pts[n - 2], dy = pt.y - L.pts[n - 1];
+    if (dx * dx + dy * dy < 4 / (this.vp.scale * this.vp.scale)) { return; }
+    L.pts.push(pt.x, pt.y);
+    this.requestFrame();
+  };
+
+  P.drawLasso = function () {
+    this.clearLive();
+    var x = this.x.live, L = this.lasso;
+    R.pageTransform(x, this.vp, this.dpr);
+    x.lineWidth = 1.5 / this.vp.scale;
+    x.strokeStyle = '#2F5DA8';
+    x.fillStyle = 'rgba(47,93,168,0.06)';
+    x.beginPath();
+    if (L) {
+      for (var i = 0; i < L.pts.length; i += 2) { if (i) { x.lineTo(L.pts[i], L.pts[i + 1]); } else { x.moveTo(L.pts[0], L.pts[1]); } }
+      x.closePath();
+      x.fill();
+      x.stroke();
+    }
+    // outline the picked strokes
+    if (this.picked && this.picked.length) {
+      var bb = this.pickedBox();
+      x.setLineDash && x.setLineDash([6 / this.vp.scale, 4 / this.vp.scale]);
+      x.strokeRect(bb.minX, bb.minY, bb.maxX - bb.minX, bb.maxY - bb.minY);
+      x.setLineDash && x.setLineDash([]);
+    }
+  };
+
+  P.pickedStrokes = function () {
+    var ids = this.picked || [], out = [];
+    for (var i = 0; i < this.strokes.length; i++) { if (ids.indexOf(this.strokes[i].id) >= 0) { out.push(this.strokes[i]); } }
+    return out;
+  };
+
+  P.pickedBox = function () {
+    var list = this.pickedStrokes(), bb = null;
+    for (var i = 0; i < list.length; i++) { bb = G.union(bb, list[i].bb); }
+    return bb;
+  };
+
+  // A pen stroke is picked when most of its points are inside the loop.
+  P.endLasso = function () {
+    var poly = this.lasso.pts;
+    this.lasso = null;
+    var ids = [];
+    if (poly.length >= 6) {
+      for (var i = 0; i < this.strokes.length; i++) {
+        var s = this.strokes[i];
+        if (s.t !== 'p') { continue; }
+        var inside = 0, n = s.pts.length / 2;
+        for (var k = 0; k < n; k++) { if (G.inPoly(s.pts[k * 2], s.pts[k * 2 + 1], poly)) { inside++; } }
+        if (inside / n >= 0.6) { ids.push(s.id); }
+      }
+    }
+    this.setPicked(ids);
+  };
+
+  P.setPicked = function (ids) {
+    this.picked = ids && ids.length ? ids : null;
+    this.drawLasso();
+    if (!this.picked) { this.clearLive(); }
+    if (this.opts.onPick) { this.opts.onPick(this.picked ? this.picked.length : 0); }
+  };
+
+  // Every pen stroke on the page
+  P.pickAll = function () {
+    var ids = [];
+    for (var i = 0; i < this.strokes.length; i++) { if (this.strokes[i].t === 'p') { ids.push(this.strokes[i].id); } }
+    this.setPicked(ids);
+  };
+
+  // Replace the picked strokes with typed text (one undo step).
+  P.convertPicked = function (text, size) {
+    var list = this.pickedStrokes();
+    if (!list.length || !text) { return; }
+    var bb = this.pickedBox(), steps = [];
+    for (var i = this.strokes.length - 1; i >= 0; i--) {
+      if (this.picked.indexOf(this.strokes[i].id) >= 0) {
+        steps.push({ i: i, removed: this.strokes[i] });
+        this.strokes.splice(i, 1);
+      }
+    }
+    var c = list[0].c || '#1F1F1F';
+    var t = {
+      id: 't_' + U.strokeId().substr(2), x: Math.max(0, bb.minX), y: Math.max(0, bb.minY),
+      w: Math.max(120, Math.min(this.vp.pw - bb.minX, bb.maxX - bb.minX + 40)), s: size, c: c, t: text
+    };
+    this.texts.push(t);
+    this.history.push({ type: 'convert', steps: steps, text: t });
+    this.setPicked(null);
+    this.render();
     this.changed();
   };
 
@@ -423,6 +574,14 @@
       return;
     }
     if (tool === 'select') { this.selectDown(sx, sy); return; }
+    if (tool === 'lasso') {
+      var lp = this.vp.toPage(sx, sy);
+      this.picked = null;
+      if (this.opts.onPick) { this.opts.onPick(0); }
+      this.lasso = { pts: [lp.x, lp.y] };
+      this.requestFrame();
+      return;
+    }
     var pt = this.vp.toPage(sx, sy);
     if (tool === 'eraser') {
       this.erase = { steps: [], dirty: null, last: { x: pt.x, y: pt.y, sx: sx, sy: sy } };
@@ -450,6 +609,7 @@
       return;
     }
     if (this.drag) { this.dragMove(sx, sy); return; }
+    if (this.lasso) { this.lassoMove(sx, sy); return; }
     var pt = this.vp.toPage(sx, sy);
     if (this.erase) {
       var last = this.erase.last;
@@ -474,6 +634,7 @@
   P.up = function () {
     if (this.panState) { this.endPan(); return; }
     if (this.drag) { this.endDrag(); return; }
+    if (this.lasso) { this.endLasso(); return; }
     if (this.erase) { this.endErase(); return; }
     if (this.cur) { this.commit(); }
   };
@@ -483,8 +644,10 @@
     if (this.erase) { this.endErase(); }
     if (this.panState) { this.endPan(); }
     if (this.drag) { this.drag = null; this.renderPaper(); }
+    this.lasso = null;
     this.clearLive();
     if (this.sel) { this.drawSelection(); }
+    if (this.picked) { this.drawLasso(); }
   };
 
   P.hover = function (sx, sy) {
@@ -706,7 +869,7 @@
   P.acceptsTouch = function (sx, sy) {
     if (!this.band.on || this.readOnly) { return true; }
     var t = this.tool.tool;
-    if (t === 'hand' || t === 'select') { return true; }
+    if (t === 'hand' || t === 'select' || t === 'lasso') { return true; }
     var py = (sy - this.vp.oy) / this.vp.scale;
     return K.band.contains(this.band.y, this.band.n, py, 6 / this.vp.scale);
   };
@@ -715,23 +878,24 @@
 
   P.applyHistory = function (r) {
     if (!r) { return; }
-    if (r.paper) {
-      if (this.sel && !this.imgById(this.sel)) { this.setSelection(null); }
+    if (this.sel && !this.imgById(this.sel)) { this.setSelection(null); }
+    if (r.full) { this.render(); }
+    else if (r.paper) {
       this.loadAssets();
       this.renderPaper();
       if (this.sel) { this.drawSelection(); }
-    } else if (r.full) { this.render(); } else { this.renderDirty(r.dirty); }
+    } else { this.renderDirty(r.dirty); }
     this.changed();
   };
 
   P.undo = function () {
     if (this.cur || this.erase || this.drag) { return; }
-    this.applyHistory(this.history.undo(this.strokes, this.imgs));
+    this.applyHistory(this.history.undo(this.strokes, this.imgs, this.texts));
   };
 
   P.redo = function () {
     if (this.cur || this.erase || this.drag) { return; }
-    this.applyHistory(this.history.redo(this.strokes, this.imgs));
+    this.applyHistory(this.history.redo(this.strokes, this.imgs, this.texts));
   };
 
   P.clear = function () {

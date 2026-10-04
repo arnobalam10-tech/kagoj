@@ -37,10 +37,18 @@
         self.redoBtn.classList.toggle('disabled', !r);
       },
       onView: function (pct) { self.zoomPct = pct; self.toolbar.setZoom(pct); },
-      onSelect: function (id) { self.selBar.style.display = id ? '' : 'none'; },
+      onSelect: function (id, kind) {
+        self.selBar.style.display = id ? '' : 'none';
+        self.editBtn.style.display = kind === 'text' ? '' : 'none';
+      },
+      onPick: function (n) {
+        self.pickBar.style.display = n ? '' : 'none';
+        self.convBtn.querySelector('.btn-label').textContent = 'Convert ' + n + (n === 1 ? ' stroke' : ' strokes') + ' to text';
+      },
       onStylus: function () { self.offerPencilOnly(); }
     });
     this.selBar.style.display = 'none';
+    this.pickBar.style.display = 'none';
     this.applyPalm();
     this.applyTool();
     this.engine.setReadOnly(this.readOnly);
@@ -85,14 +93,26 @@
     this.stage.appendChild(this.toolbar.el);
     this.stage.appendChild(this.msg);
     // floating bar while an image is selected
-    var del = D.button({ icon: 'trash', label: 'Delete image', cls: 'danger' });
+    var del = D.button({ icon: 'trash', label: 'Delete', cls: 'danger' });
     D.tap(del, function () { self.engine.deleteSelected(); });
     var done = D.button({ label: 'Done' });
     D.tap(done, function () { self.engine.setSelection(null); });
-    this.selBar = D.el('div.sel-bar', null, [del, done]);
+    this.editBtn = D.button({ icon: 'edit', label: 'Edit text' });
+    D.tap(this.editBtn, function () {
+      var id = self.engine.sel;
+      K.app.loadExtras(function (err) { if (!err) { K.Handwriting.editDialog(self.engine, id); } });
+    });
+    this.selBar = D.el('div.sel-bar', null, [this.editBtn, del, done]);
+    // bar shown after a lasso pick: convert handwriting to typed text
+    this.convBtn = D.button({ icon: 'text', label: 'Convert to text', cls: 'primary' });
+    D.tap(this.convBtn, function () { self.convertPicked(); });
+    var cancel = D.button({ label: 'Cancel' });
+    D.tap(cancel, function () { self.engine.setPicked(null); });
+    this.pickBar = D.el('div.sel-bar.pick-bar2', null, [this.convBtn, cancel]);
+    this.stage.appendChild(this.pickBar);
     this.stage.appendChild(this.selBar);
     // overlays inside the stage must not reach the drawing input underneath
-    [this.selBar, this.msg].forEach(function (el) {
+    [this.selBar, this.pickBar, this.msg].forEach(function (el) {
       ['touchstart', 'touchmove', 'touchend', 'pointerdown', 'pointermove', 'pointerup', 'mousedown'].forEach(function (ev) {
         D.on(el, ev, function (e) { e.stopPropagation(); });
       });
@@ -284,6 +304,7 @@
         { label: 'Paper style…', icon: 'paper', onTap: function () { self.paperMenu(); } },
         { label: 'Page list', icon: 'list', onTap: function () { self.pageList(); } },
         { label: 'Import from Uploads…', icon: 'upload', onTap: function () { self.importFromUploads(); } },
+        { label: 'Convert page handwriting to text…', icon: 'text', onTap: function () { self.convertPage(); } },
         { label: 'Fit whole page', icon: 'fit', onTap: function () { self.engine.fit('page'); } },
         { label: 'Fit page width', icon: 'fit', onTap: function () { self.engine.fit('width'); } },
         { label: this.readOnly ? 'Write mode' : 'View mode (no writing)', icon: this.readOnly ? 'pencil' : 'eye', onTap: function () { self.setReadOnly(!self.readOnly); } },
@@ -371,6 +392,23 @@
       }
       sheets.toast(items.length + (items.length === 1 ? ' page' : ' pages') + ' added');
     });
+  };
+
+  // ---------- handwriting to text ----------
+
+  P.convertPicked = function () {
+    var self = this;
+    K.app.loadExtras(function (err) {
+      if (err) { sheets.toast(err.message, 4000); return; }
+      K.Handwriting.convert(self.engine);
+    });
+  };
+
+  P.convertPage = function () {
+    if (this.readOnly) { this.setReadOnly(false); }
+    this.engine.pickAll();
+    if (!this.engine.picked) { sheets.toast('There is no handwriting on this page.'); return; }
+    this.convertPicked();
   };
 
   // ---------- palm rejection ----------

@@ -27,14 +27,29 @@
   function r1(v) { return Math.round(v * 10) / 10; }
 
   // w/h: page size in page units (default A4 1000 x 1414); imgs: placed images
-  C.encode = function (strokes, w, h, imgs) {
+  C.encode = function (strokes, w, h, imgs, texts) {
     var out = [];
     for (var i = 0; i < strokes.length; i++) { out.push(C.encodeStroke(strokes[i])); }
     var d = { v: 1, w: w || K.config.pageW, h: h || K.config.pageH, strokes: out };
     if (imgs && imgs.length) {
       d.imgs = imgs.map(function (m) { return { id: m.id, a: m.a, x: r1(m.x), y: r1(m.y), w: r1(m.w), h: r1(m.h) }; });
     }
+    if (texts && texts.length) {
+      d.texts = texts.map(function (t) { return { id: t.id, x: r1(t.x), y: r1(t.y), w: r1(t.w), s: r1(t.s), c: t.c, t: t.t }; });
+    }
     return d;
+  };
+
+  C.decodeTexts = function (d) {
+    var out = [];
+    if (!d || !d.texts) { return out; }
+    for (var i = 0; i < d.texts.length; i++) {
+      var t = d.texts[i];
+      if (t && typeof t.t === 'string' && t.w > 0 && t.s > 0) {
+        out.push({ id: t.id, x: +t.x, y: +t.y, w: +t.w, s: +t.s, c: t.c || '#1F1F1F', t: t.t });
+      }
+    }
+    return out;
   };
 
   C.decodeImgs = function (d) {

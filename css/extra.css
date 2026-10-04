@@ -99,3 +99,9 @@
 
 .pick-actions { -webkit-flex-wrap: wrap; flex-wrap: wrap; }
 .phone .pick-actions .btn { -webkit-box-flex: 1; -webkit-flex: 1 1 100%; flex: 1 1 100%; margin: 4px 0 0; }
+
+.text-area { display: block; width: 100%; min-height: 140px; border: 1px solid #DAD7CF; border-radius: 10px; padding: 10px 12px;
+  font: 18px/1.4 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color: #2B2B2B; background: #fff; -webkit-appearance: none; outline: none; resize: vertical; }
+.hw-err { color: #A8322D; }
+.sheet-hw { width: 520px; margin-left: -260px; }
+.phone .sheet-hw { width: auto; margin-left: 0; }

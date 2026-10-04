@@ -24,7 +24,7 @@ var ctx = vm.createContext(Object.assign(win, {
   Uint8Array: Uint8Array, document: { addEventListener: function () {} }
 }));
 ['js/config.js', 'js/core/util.js', 'js/core/dom.js', 'js/core/log.js', 'js/draw/geometry.js', 'js/draw/codec.js',
- 'js/draw/eraser.js', 'js/draw/history.js', 'js/draw/viewport.js', 'js/draw/band.js', 'js/draw/input.js'].forEach(function (f) {
+ 'js/draw/eraser.js', 'js/draw/history.js', 'js/draw/viewport.js', 'js/draw/band.js', 'js/draw/input.js', 'js/hw/handwriting.js'].forEach(function (f) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
 });
 var K = win.Kagoj;
@@ -244,6 +244,68 @@ test('band: touches outside are ignored, so a palm never becomes a pinch', funct
   inp.touchEnd(ev([p], [palm]));
   assert.strictEqual(log.join(' '), 'down move up');
   inp.destroy();
+});
+
+console.log('handwriting to text');
+function scribble(id, x0, y0, w, h) {
+  var pts = [];
+  for (var i = 0; i <= 10; i++) { pts.push(x0 + w * i / 10, y0 + (i % 2 ? h : 0)); }
+  return K.geom.finishStroke({ id: id, t: 'p', c: '#1F1F1F', w: 2, pts: pts });
+}
+test('strokes are grouped into lines top to bottom, keeping writing order', function () {
+  // line 2 written first, then line 1; an i-dot just above line 1
+  var a = scribble('a', 100, 200, 60, 20), b = scribble('b', 170, 202, 50, 18);
+  var c = scribble('c', 100, 120, 80, 22), dot = scribble('dot', 140, 108, 3, 3), d = scribble('d', 190, 118, 40, 24);
+  var dot2 = K.geom.finishStroke({ id: 'dot2', t: 'p', c: '#000', w: 2, pts: [200, 125, 201, 126] }); // tiny mark inside line 1
+  var lines = K.Handwriting.groupLines([a, b, c, dot, d, dot2]);
+  assert.strictEqual(lines.length, 2);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(lines[0].strokes.map(function (s) { return s.id; }))), ['c', 'dot', 'd', 'dot2']);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(lines[1].strokes.map(function (s) { return s.id; }))), ['a', 'b']);
+});
+test('request has one entry per line in Google ink format; reply parsed', function () {
+  var lines = K.Handwriting.groupLines([scribble('a', 100, 200, 60, 20), scribble('b', 100, 100, 60, 20)]);
+  var req = K.Handwriting.buildRequest(lines);
+  assert.strictEqual(req.requests.length, 2);
+  var ink = req.requests[0].ink[0];
+  assert.strictEqual(ink.length, 3);                 // [xs, ys, ts]
+  assert.strictEqual(ink[0][0], 0);                  // relative to the line
+  assert.strictEqual(req.requests[0].language, 'en');
+  var reply = ['SUCCESS', [['x', ['hello', 'hallo'], [], {}], ['y', ['world'], [], {}]]];
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(K.Handwriting.parse(reply, 2))), ['hello', 'world']);
+  assert.strictEqual(K.Handwriting.parse(['FAILED'], 1), null);
+});
+test('lasso point-in-polygon', function () {
+  var sq = [0, 0, 10, 0, 10, 10, 0, 10];
+  assert.ok(K.geom.inPoly(5, 5, sq));
+  assert.ok(!K.geom.inPoly(15, 5, sq));
+});
+test('typed text survives encode/decode', function () {
+  var d = K.codec.encode([], 1000, 1414, [], [{ id: 't_1', x: 100, y: 120.04, w: 400, s: 22, c: '#1F1F1F', t: 'hello\nworld' }]);
+  var back = K.codec.decodeTexts(JSON.parse(JSON.stringify(d)));
+  assert.strictEqual(back[0].t, 'hello\nworld');
+  assert.strictEqual(back[0].y, 120);
+  assert.strictEqual(K.codec.decodeTexts({ texts: [{ t: 'x', w: 0, s: 1 }] }).length, 0);
+});
+test('convert is one undo step: strokes come back, text goes away', function () {
+  var h = new K.History(), strokes = [scribble('a', 0, 0, 10, 10), scribble('b', 0, 50, 10, 10), scribble('c', 0, 90, 10, 10)];
+  var texts = [], imgs = [];
+  // convert a and c (recorded highest index first, as the engine does)
+  var steps = [{ i: 2, removed: strokes[2] }, { i: 0, removed: strokes[0] }];
+  strokes.splice(2, 1); strokes.splice(0, 1);
+  var t = { id: 't_x', x: 0, y: 0, w: 100, s: 20, c: '#000', t: 'ac' };
+  texts.push(t);
+  h.push({ type: 'convert', steps: steps, text: t });
+  var r = h.undo(strokes, imgs, texts);
+  assert.ok(r.full);
+  assert.deepStrictEqual(strokes.map(function (s) { return s.id; }), ['a', 'b', 'c']);
+  assert.strictEqual(texts.length, 0);
+  h.redo(strokes, imgs, texts);
+  assert.deepStrictEqual(strokes.map(function (s) { return s.id; }), ['b']);
+  assert.strictEqual(texts[0].t, 'ac');
+  h.push({ type: 'obj-set', kind: 'text', id: 't_x', before: { t: 'ac' }, after: { t: 'abc' } });
+  texts[0].t = 'abc';
+  h.undo(strokes, imgs, texts);
+  assert.strictEqual(texts[0].t, 'ac');
 });
 
 console.log('viewport');

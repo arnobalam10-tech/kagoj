@@ -19,7 +19,8 @@
       sizes: [[8, 'Small'], [18, 'Medium'], [36, 'Large']]
     },
     hand: { label: 'Hand', icon: 'hand', colors: [], sizes: [] },
-    select: { label: 'Select images', icon: 'select', colors: [], sizes: [] }
+    select: { label: 'Select images and text', icon: 'select', colors: [], sizes: [] },
+    lasso: { label: 'Lasso: handwriting to text', icon: 'lasso', colors: [], sizes: [] }
   };
 
   var PREFS_KEY = 'kagoj.prefs';
@@ -181,7 +182,7 @@
 
   Toolbar.prototype.toolButtons = function (into) {
     var ws = this.ws, cur = ws.prefs.tool;
-    ['pen', 'highlighter', 'eraser', 'hand', 'select'].forEach(function (t) {
+    ['pen', 'highlighter', 'eraser', 'hand', 'select', 'lasso'].forEach(function (t) {
       var def = K.TOOLS[t];
       var b = D.button({ icon: def.icon, title: def.label, cls: 'tool' + (cur === t ? ' selected' : '') });
       D.tap(b, function () {

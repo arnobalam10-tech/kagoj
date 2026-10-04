@@ -141,3 +141,13 @@ Notebooks tab; any notebook can import pages from Uploads.
 - [x] Panel: tools, colours/sizes, zoom, page navigation, add page; opens toward the free side
 - [x] Position + open state remembered; survives rotation
 - [ ] Owner: try it on the iPad 2
+
+---
+
+# v1.4 — Handwriting to text (owner: Google free service, English, replace with typed text, lasso or whole page)
+- [x] Lasso tool + "Convert page handwriting to text"
+- [x] Line grouping + Google handwriting-input request (verified live)
+- [x] Preview/edit dialog, replace strokes with a typed text object (one undo step)
+- [x] Typed text: render under ink, select/move/resize/edit/delete, synced in drawing JSON
+- [x] Unit tests; browser test against the real service
+- [ ] Owner: try with real handwriting on the iPad 2
