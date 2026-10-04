@@ -146,6 +146,10 @@
     ]));
 
     var p = K.prefs.all();
+    body.appendChild(section('Appearance', [
+      row('Theme', segmented([['light', 'Light'], ['dark', 'Dark'], ['system', 'System']], K.Theme.mode(), function (v) { K.Theme.set(v); }), 'Ctrl+Shift+L switches light and dark')
+    ]));
+
     body.appendChild(section('Writing', [
       row('Reopen last notebook on launch', toggle(p.reopenLast, function (v) { K.prefs.set('reopenLast', v); })),
       row('Default zoom', segmented([['auto', 'Auto'], ['width', 'Fit width'], ['page', 'Fit page']], p.fitMode, function (v) { K.prefs.set('fitMode', v); }),

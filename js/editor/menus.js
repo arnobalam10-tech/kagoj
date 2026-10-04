@@ -162,10 +162,10 @@
   K.slashMenu = {
     open: function (ed, id) { openMenu('slash', ed, id, 0, K.slashItems()); active.fromPlus = true; },
     track: function (ed, id, before) {
-      var m = /\/([^\s/]{0,24})$/.exec(before);
+      var m = /\/([^/]{0,24})$/.exec(before);
       var q = m ? m[1] : '';
       var items = K.slashItems().filter(function (it) { return match(it, q); });
-      if (!items.length && q.length > 3) { closeMenu(); return; }
+      if (!items.length && q.length > 2) { closeMenu(); return; }
       openMenu('slash', ed, id, q.length + 1, items);
     },
     isOpenFor: function (ed, id) { return !!(active && active.kind === 'slash' && active.id === id && active.ed === ed); },

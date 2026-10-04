@@ -553,16 +553,29 @@
     if (!b || !rt || e.target !== rt) { return; }
     var before = R.textBefore().replace(/ /g, ' ');
     var full = (rt.textContent || '').replace(/ /g, ' ');
-    // block shortcuts typed at the very start of a block
+    var prev = Docs.plain(b.html).replace(/ /g, ' ');
+    // block shortcuts typed at the very start of a block (also when the
+    // keyboard inserts several characters at once, e.g. iOS autocorrect)
     if (b.type === 'p' || b.type === 'bul' || b.type === 'num' || b.type === 'todo') {
       for (var i = 0; i < SHORTCUTS.length; i++) {
-        if (SHORTCUTS[i][0].test(before) && full.indexOf(before) === 0 && (b.type === 'p' || /^#/.test(before))) {
-          R.deleteBefore(before.length);
-          this.syncFromDom(id);
-          this.turnInto(id, SHORTCUTS[i][1], SHORTCUTS[i][2]);
-          this.focus(id, 0);
-          return;
+        var pm = /^(#{1,3}|[-*+]|1[.)]|\[\s?\]|\[x\]|>|"|!)\s/i.exec(full);
+        if (!pm || pm[0].length > full.length) { break; }
+        var pre = pm[0];
+        if (!SHORTCUTS[i][0].test(pre) || (prev.indexOf(pre) === 0 && prev.length >= pre.length)) { continue; }
+        if (b.type !== 'p' && !/^#/.test(pre)) { continue; }
+        var rest = full.substr(pre.length);
+        b.html = R.clean(rt.innerHTML);
+        // strip the prefix characters from the start of the block
+        var removed = 0, walker = document.createTreeWalker(rt, 4, null, false), n;
+        while (removed < pre.length && (n = walker.nextNode())) {
+          var take = Math.min(pre.length - removed, n.nodeValue.length);
+          n.nodeValue = n.nodeValue.substr(take);
+          removed += take;
         }
+        b.html = R.clean(rt.innerHTML);
+        this.turnInto(id, SHORTCUTS[i][1], SHORTCUTS[i][2]);
+        this.focus(id, rest.length);
+        return;
       }
       if (b.type === 'p' && full === '---') { this.syncFromDom(id); b.html = ''; this.turnInto(id, 'div'); this.insertAfter(id, Docs.newBlock('p'), true); return; }
       if (b.type === 'p' && full === '```') { b.html = ''; this.turnInto(id, 'code', { text: '', lang: 'plain' }); return; }
@@ -571,7 +584,7 @@
     this.syncFromDom(id);
     this.changed();
     // menus
-    if (/(^|\s)\/[^\s/]{0,24}$/.test(before)) { K.slashMenu.track(this, id, before); }
+    if (/(^|\s)\/[^/]{0,24}$/.test(before) && !/\/\s/.test(before)) { K.slashMenu.track(this, id, before); }
     else if (K.slashMenu.isOpenFor(this, id)) { K.slashMenu.close(); }
     if (/(^|\s)@[^@]{0,30}$/.test(before)) { K.mentionMenu.track(this, id, before, '@'); }
     else if (/\[\[[^\]]{0,30}$/.test(before)) { K.mentionMenu.track(this, id, before, '[['); }

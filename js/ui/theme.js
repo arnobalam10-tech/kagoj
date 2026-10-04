@@ -77,7 +77,11 @@
     var m = Theme.mode();
     return m === 'dark' || (m === 'system' && !!(mq && mq.matches));
   };
-  Theme.apply = function () { document.body.classList.toggle('dark', Theme.isDark()); };
+  Theme.apply = function () {
+    var on = Theme.isDark();
+    document.body.classList.toggle('dark', on);
+    document.documentElement.classList.toggle('dark', on);
+  };
   Theme.set = function (m) { K.prefs.set('theme', m); Theme.apply(); };
   Theme.toggle = function () { Theme.set(Theme.isDark() ? 'light' : 'dark'); };
   if (mq && mq.addListener) { mq.addListener(function () { Theme.apply(); }); }

@@ -3,7 +3,18 @@
 _Last updated: 2026-10-03_
 
 ## Status
-**V2 in progress (local commits, NOT pushed/deployed). Production is still v1.4.** P0 done; P1 (typed pages) code written, builds and passes tests; first browser test found a bug: Markdown block shortcuts (# , - , [] , > ) do not convert while typing (onInput shortcut check in js/editor/editor.js). Next: fix that, finish browser checks of P1 (slash menu, selection toolbar, sidebar drag, mentions, columns, tables), then deploy P1, then P2 databases, P3 calendar, P4 extras (see PLAN.md V2).
+**V2 P1 (typed pages) deployed as 2.0.0.** P0 + P1 done. Next: P2 databases, P3 calendar, P4 extras (PLAN.md V2).
+
+### V2 P1 — what exists
+- Sidebar (pinned at >=1000px wide, slide-out below): Search, Home, Calendar, Handwritten notebooks, Uploads, Settings, Favorites, nested Pages tree (expand, +, ••• menu, press-and-hold / mouse drag to move or nest), Trash, sync pill, New page.
+- Pages (#/p/<id>): cover (gradients/colours/uploaded image), emoji icon, title, block editor, backlinks, breadcrumbs, last edited, undo/redo (page history), star, ••• page menu (body/heading font, size, line spacing, full width, lock, default style, favorite, duplicate, move, sub-page, delete).
+- Blocks: text, H1-3, toggle headings, bullets, numbers (1/a/i by depth), to-dos, toggles, quote, callout (emoji), divider, sub-page, link to page, simple table, 2-4 columns (nested editors), code (20 languages, own highlighter), table of contents, breadcrumb, image (upload, resize, align, caption), file (any type, 50 MB, opens via signed link), web bookmark (kagoj-link Edge Function), sketch (handwritten canvas inside a page, live preview).
+- Editing: / menu (spaces allowed), Markdown shortcuts (also when several characters arrive at once), inline **bold** *italic* ~strike~ , @ dates/reminders/pages/new page, [[ links, selection toolbar (B I U S code link, 10 text + 10 highlight colours, clear), block menu (turn into, colour, font, indent/outdent, duplicate, move to page, delete, table/column/image extras), drag handle reorder, Tab indent, Enter/Backspace/Delete/arrow behaviour, paste of multi-line Markdown.
+- Fonts: 25 (system + 8 bundled OFL web fonts as woff); per page, per block, heading font, size, line spacing, default for new pages.
+- Dark mode (Settings -> Appearance, Ctrl+Shift+L). Search (Ctrl+P), Ctrl+N new page, Ctrl+ sidebar, Ctrl+[ ] back/forward.
+- Sync: docs table with revision guard; conflict = block-level 3-way merge (both versions kept only when the same block changed on both). Versions table gets a snapshot at most every 10 minutes per page.
+- Bundles: core 81.8 KB, editor 89.9, canvas 76.3, extra 41.7; CSS 18.2 KB.
+- Fixed during testing: shell class collided with the modal .overlay style (app went invisible when the sidebar slid out).
 
 ### Previous status
 **v1.4 (handwriting to text), v1.3 (floating tool palette) and v1.2 (writing band) on top of v1.1 (Uploads + image placement + palm rejection) is built, tested and pushed; v1 is live at https://kagoj-three.vercel.app.**

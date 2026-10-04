@@ -31,7 +31,7 @@
   function layout() {
     var sideVisible = chromeOn && (Shell.pinned() || overlayOpen);
     el.shell.className = 'shell' + (chromeOn ? '' : ' no-chrome') + (Shell.pinned() ? ' pinned' : ' floating') +
-      (sideVisible ? ' side-open' : '') + (overlayOpen && !Shell.pinned() ? ' overlay' : '');
+      (sideVisible ? ' side-open' : '') + (overlayOpen && !Shell.pinned() ? ' sb-over' : '');
     Shell.emit('layout');
   }
 

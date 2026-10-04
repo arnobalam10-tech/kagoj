@@ -178,7 +178,7 @@ publish to web) are dropped. Phone reminders come from a private calendar feed (
 ## Phases
 - [x] **P0 Restructure**: multi-bundle build + loader; pen engine moved to its own bundle; palm options moved
       into the floating tool button
-- [ ] **P1 Pages**: `docs` table + sync + merge; sidebar tree (favorites, expand, +, •••, drag to move/nest,
+- [x] **P1 Pages**: `docs` table + sync + merge; sidebar tree (favorites, expand, +, •••, drag to move/nest,
       trash); top bar (breadcrumbs, star, •••); page icon + cover; block editor (text, H1–H3, bullets,
       numbers, to-do, toggle + toggle headings, quote, callout, divider, sub-page, simple table, columns,
       code with highlighting, TOC, breadcrumb, image, file, bookmark, sketch → handwritten page); `/` menu,

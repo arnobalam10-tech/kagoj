@@ -1,6 +1,6 @@
 {
   "name": "kagoj",
-  "version": "1.4.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Kagoj — personal handwriting notebook (ES5, no runtime deps)",
   "scripts": {
