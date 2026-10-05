@@ -5,6 +5,11 @@ _Last updated: 2026-10-05_
 ## Status
 **V2 complete (2.4.0): P0-P4 done.**
 
+### 2.5.2
+- Text highlights (span.bg-*) are marker-strength; block backgrounds stay soft. Coloured callouts get a matching tint and a 4px accent edge (gray = navy edge for statute / case boxes).
+- Fixed: diagrams with line breaks in labels never saved their picture (Mermaid emits HTML-style <br>, the XML parser rejected it). cleanSvg now parses with an inert HTML document and keeps only the <svg>.
+- Owner content: LAW200 › "Introduction to Contract Law & Offer and Acceptance" (227 blocks) rebuilt by hand from the 17-page PDF: colour code, 14 numbered sections, statute/definition/formula/analogy/memory/case-law callouts, tickable core takeaways, columns, tables, 2 diagrams, cheat sheet, quick revision. Inserted via SQL through a temporary staging table (md5-verified, then dropped); link block added under LAW200 › Notes.
+
 ### 2.5.1
 - Launch opens Home. reopenLast now defaults to off (Settings: "Open the last page or notebook on launch"); the iOS home-screen app (navigator.standalone) also ignores the address it was left on unless that setting is on.
 

@@ -247,3 +247,28 @@
 .has-touch .blk.cur > .blk-gut { opacity: 0.6; }
 .col .blk-gut { left: -22px; width: 20px; }
 .col .blk-gut .g-add { display: none; }
+
+/* vivid marker highlights for text (block backgrounds stay soft) */
+span.bg-yellow { background: #FFEB99; } span.bg-pink { background: #FFD1E3; } span.bg-green { background: #C8F0D2; }
+span.bg-blue { background: #CFE5FA; } span.bg-purple { background: #E5D9F8; } span.bg-orange { background: #FFDDBB; }
+span.bg-red { background: #FFD3CF; } span.bg-gray { background: #E6E5E1; } span.bg-brown { background: #ECDDD4; }
+span[class^="bg-"] { border-radius: 3px; padding: 0 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.dark span.bg-yellow { background: #6B5A1E; } .dark span.bg-pink { background: #6B2E47; } .dark span.bg-green { background: #285238; }
+.dark span.bg-blue { background: #1F4568; } .dark span.bg-purple { background: #46335F; } .dark span.bg-orange { background: #6B4321; }
+.dark span.bg-red { background: #6B2D29; } .dark span.bg-gray { background: #474747; } .dark span.bg-brown { background: #5A4338; }
+/* coloured callouts get an accent edge */
+.t-callout > .blk-body.bg-blue { box-shadow: inset 4px 0 0 #3B82F6; } .t-callout > .blk-body.bg-purple { box-shadow: inset 4px 0 0 #7C3AED; }
+.t-callout > .blk-body.bg-green { box-shadow: inset 4px 0 0 #16A34A; } .t-callout > .blk-body.bg-yellow { box-shadow: inset 4px 0 0 #E0B12E; }
+.t-callout > .blk-body.bg-gray { box-shadow: inset 4px 0 0 #334155; } .t-callout > .blk-body.bg-red { box-shadow: inset 4px 0 0 #DC2626; }
+.t-callout > .blk-body.bg-orange { box-shadow: inset 4px 0 0 #EA8A1A; } .t-callout > .blk-body.bg-pink { box-shadow: inset 4px 0 0 #DB2777; }
+.t-callout > .blk-body.bg-brown { box-shadow: inset 4px 0 0 #8B5E45; }
+.t-todo > .blk-body[class*="bg-"], .t-bul > .blk-body[class*="bg-"], .t-p > .blk-body[class*="bg-"] { padding: 1px 8px; }
+.t-callout > .blk-body.bg-yellow { background: #FFFBEA; } .t-callout > .blk-body.bg-blue { background: #EAF4FF; }
+.t-callout > .blk-body.bg-green { background: #ECFDF3; } .t-callout > .blk-body.bg-purple { background: #F5F0FF; }
+.t-callout > .blk-body.bg-gray { background: #F1F5F9; } .t-callout > .blk-body.bg-red { background: #FEF2F2; }
+.t-callout > .blk-body.bg-orange { background: #FFF4E6; } .t-callout > .blk-body.bg-pink { background: #FDF2F8; }
+.t-callout > .blk-body.bg-brown { background: #F7F1EC; }
+.dark .t-callout > .blk-body.bg-yellow { background: #3A3320; } .dark .t-callout > .blk-body.bg-blue { background: #1C2C3D; }
+.dark .t-callout > .blk-body.bg-green { background: #1D3326; } .dark .t-callout > .blk-body.bg-purple { background: #2C2440; }
+.dark .t-callout > .blk-body.bg-gray { background: #262B33; } .dark .t-callout > .blk-body.bg-red { background: #3A2222; }
+.dark .t-callout > .blk-body.bg-orange { background: #3A2C1C; } .dark .t-callout > .blk-body.bg-pink { background: #3A2231; }

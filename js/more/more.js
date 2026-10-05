@@ -237,9 +237,13 @@
   // saved diagram pictures are shown with innerHTML: keep only drawing markup
   function cleanSvg(svg) {
     try {
-      var doc = new window.DOMParser().parseFromString(svg, 'image/svg+xml');
-      var root = doc.documentElement;
-      if (!root || root.nodeName.toLowerCase() !== 'svg') { return ''; }
+      // Mermaid writes HTML-style <br> inside labels, so parse as HTML (an inert document)
+      var doc = document.implementation.createHTMLDocument('');
+      var holder = doc.createElement('div');
+      holder.innerHTML = svg;
+      var root = holder.querySelector('svg');
+      if (!root) { return ''; }
+      Array.prototype.slice.call(root.querySelectorAll('style')).forEach(function (st) { st.textContent = st.textContent.replace(/@import[^;]*;?|url\([^)]*\)|expression\s*\(/gi, ''); });
       Array.prototype.slice.call(root.querySelectorAll('script, iframe, object, embed, link, meta, animate, set')).forEach(function (n) { n.parentNode.removeChild(n); });
       Array.prototype.slice.call(root.querySelectorAll('*')).concat([root]).forEach(function (n) {
         Array.prototype.slice.call(n.attributes).forEach(function (a) {
@@ -248,7 +252,9 @@
           if (nm === 'style' && /url\(|expression|javascript:/.test(v)) { n.removeAttribute(a.name); }
         });
       });
-      return new window.XMLSerializer().serializeToString(root).substr(0, 400000);
+      while (holder.firstChild) { holder.removeChild(holder.firstChild); }
+      holder.appendChild(root);
+      return holder.innerHTML.substr(0, 400000);
     } catch (e) { return ''; }
   }
   K.cleanSvg = cleanSvg;
