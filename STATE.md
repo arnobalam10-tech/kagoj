@@ -5,6 +5,10 @@ _Last updated: 2026-10-05_
 ## Status
 **V2 complete (2.4.0): P0-P4 done.**
 
+### 2.6.0 work + task lists
+- Owner data (SQL): section Work 💼 with Baazar 🛒 and StudyNex 📘 pages (role box, ✅ Tasks with Add task button, quick links, Notes) each with sub-pages Library (inline database: Name, Type Prompt/Skill/MD file/Link/Doc, Link, Tags, Updated; views All/By type/Prompts/Links; row templates New prompt / skill / md file / link with code boxes, file slot, bookmark) and Meeting notes (New meeting button). Course pages got a ✅ Tasks section too.
+- Task lists: pages with settings.taskList (Baazar, StudyNex, FIN245, INB372, LAW200). Home shows a Tasks card (open top-level to-dos per list + open rows of the Tasks database as "Random"), tick to complete. Quick task has a list picker (remembered); adding to a page inserts a to-do under its Tasks heading, with an @date (and reminder when timed) so it also reaches the calendar and Next up. "No date" clears the date.
+
 ### 2.5.2
 - Text highlights (span.bg-*) are marker-strength; block backgrounds stay soft. Coloured callouts get a matching tint and a 4px accent edge (gray = navy edge for statute / case boxes).
 - Fixed: diagrams with line breaks in labels never saved their picture (Mermaid emits HTML-style <br>, the XML parser rejected it). cleanSvg now parses with an inert HTML document and keeps only the <svg>.
