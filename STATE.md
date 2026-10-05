@@ -5,6 +5,9 @@ _Last updated: 2026-10-05_
 ## Status
 **V2 complete (2.4.0): P0-P4 done.**
 
+### 2.6.1
+- Refresh button (↻) in the sidebar header and on Home: saves open edits, syncs, reloads when the sync finishes (6 s cap; straight reload offline / logged out). Shell.refresh().
+
 ### 2.6.0 work + task lists
 - Owner data (SQL): section Work 💼 with Baazar 🛒 and StudyNex 📘 pages (role box, ✅ Tasks with Add task button, quick links, Notes) each with sub-pages Library (inline database: Name, Type Prompt/Skill/MD file/Link/Doc, Link, Tags, Updated; views All/By type/Prompts/Links; row templates New prompt / skill / md file / link with code boxes, file slot, bookmark) and Meeting notes (New meeting button). Course pages got a ✅ Tasks section too.
 - Task lists: pages with settings.taskList (Baazar, StudyNex, FIN245, INB372, LAW200). Home shows a Tasks card (open top-level to-dos per list + open rows of the Tasks database as "Random"), tick to complete. Quick task has a list picker (remembered); adding to a page inserts a to-do under its Tasks heading, with an @date (and reminder when timed) so it also reaches the calendar and Next up. "No date" clears the date.

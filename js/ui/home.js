@@ -115,7 +115,7 @@
   }
 
   screen.mount = function (root) {
-    var top = D.el('header.topbar.doc-top', null, [K.shell.menuButton(), D.el('div.top-title', { text: 'Home' }), D.el('div.spacer')]);
+    var top = D.el('header.topbar.doc-top', null, [K.shell.menuButton(), D.el('div.top-title', { text: 'Home' }), D.el('div.spacer'), K.shell.refreshButton()]);
     var body = D.el('div.home-body');
     D.append(root, [top, D.el('div.doc-scroll.scrolls', null, body)]);
     st = { body: body, onChange: U.debounce(render, 250) };

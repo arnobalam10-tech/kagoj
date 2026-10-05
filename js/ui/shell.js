@@ -51,6 +51,31 @@
   Shell.isOpen = function () { return chromeOn && (Shell.pinned() || overlayOpen); };
 
   // ☰ button for screen top bars; hidden while the sidebar is pinned open
+  // Save, sync, then reload (also picks up a new app version). For the iPad
+  // home-screen app, which has no browser reload button.
+  var refreshing = false;
+  Shell.refresh = function () {
+    if (refreshing) { return; }
+    refreshing = true;
+    sheets.toast('Refreshing…', 8000);
+    K.app.emit('hide');                       // open pages save their edits
+    var done = false;
+    function reload() { if (done) { return; } done = true; location.reload(); }
+    if (K.sb.isLoggedIn() && navigator.onLine !== false) {
+      var onDone = function () { K.Sync.off('done', onDone); setTimeout(reload, 150); };
+      K.Sync.on('done', onDone);
+      setTimeout(reload, 6000);
+      K.Sync.now();
+    } else {
+      setTimeout(reload, 300);
+    }
+  };
+  Shell.refreshButton = function (cls) {
+    var b = D.button({ icon: 'refresh', title: 'Refresh (sync and reload)', cls: cls || 'refresh-btn' });
+    D.tap(b, Shell.refresh);
+    return b;
+  };
+
   Shell.menuButton = function () {
     var b = D.button({ icon: 'menu', title: 'Sidebar (Ctrl+\\)', cls: 'menu-btn' });
     D.tap(b, Shell.toggle);
@@ -422,6 +447,7 @@
     D.tap(collapse, Shell.toggle);
     side.appendChild(D.el('div.sb-head', null, [
       D.el('div.sb-brand', null, [D.el('span.wm-en', { text: 'Kagoj' }), D.el('span.wm-bn', { text: 'কাগজ' })]),
+      Shell.refreshButton('sb-mini sb-refresh'),
       collapse
     ]));
     var scroll = D.el('div.sb-scroll.scrolls');
