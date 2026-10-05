@@ -5,6 +5,10 @@ _Last updated: 2026-10-05_
 ## Status
 **V2 complete (2.4.0): P0-P4 done.**
 
+### 2.6.2
+- Coloured toggle headings (dropdowns) get a tinted, padded strip.
+- Owner content: INB372 › "Chapter 1: Globalization" (249 blocks) from the 15-page PDF; real-world examples and business analogies are collapsed dropdowns; inserted via md5-verified staging table (dropped), linked under INB372 › Notes.
+
 ### 2.6.1
 - Refresh button (↻) in the sidebar header and on Home: saves open edits, syncs, reloads when the sync finishes (6 s cap; straight reload offline / logged out). Shell.refresh().
 

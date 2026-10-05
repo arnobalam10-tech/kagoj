@@ -272,3 +272,6 @@ span[class^="bg-"] { border-radius: 3px; padding: 0 2px; -webkit-box-decoration-
 .dark .t-callout > .blk-body.bg-green { background: #1D3326; } .dark .t-callout > .blk-body.bg-purple { background: #2C2440; }
 .dark .t-callout > .blk-body.bg-gray { background: #262B33; } .dark .t-callout > .blk-body.bg-red { background: #3A2222; }
 .dark .t-callout > .blk-body.bg-orange { background: #3A2C1C; } .dark .t-callout > .blk-body.bg-pink { background: #3A2231; }
+.t-toggle > .blk-body[class*="bg-"] { padding: 3px 8px 3px 4px; border-radius: 6px; }
+.t-toggle > .blk-body.bg-orange { background: #FFF4E6; } .t-toggle > .blk-body.bg-blue { background: #EAF4FF; }
+.dark .t-toggle > .blk-body.bg-orange { background: #3A2C1C; } .dark .t-toggle > .blk-body.bg-blue { background: #1C2C3D; }
