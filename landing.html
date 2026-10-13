@@ -56,6 +56,7 @@ button { cursor: pointer; }
 .mast nav a { color: var(--soft); text-decoration: none; white-space: nowrap; }
 .mast nav a:hover { color: var(--ink); text-decoration: underline; }
 .mast nav a.cta { color: var(--blue); }
+.mast nav .short { display: none; }
 
 /* hero */
 .hero { padding: 64px 0 40px; display: grid; grid-template-columns: 1.3fr 1fr; gap: 48px; align-items: center; }
@@ -231,6 +232,8 @@ table.grid input:focus { border-color: var(--rule); outline: none; background: v
 .wl .msg.ok { color: var(--ok); } .wl .msg.err { color: var(--bad); }
 .wl ol { padding-left: 20px; color: var(--soft); }
 .wl ol li { margin-bottom: 8px; }
+.perk { display: flex; gap: 12px; align-items: flex-start; background: var(--hl-yellow); border-radius: 12px; padding: 14px 16px; margin-top: 18px; transform: rotate(-0.6deg); box-shadow: 2px 2px 0 var(--rule2); }
+.perk-ico { font-size: 24px; line-height: 1.2; }
 
 footer { border-top: 3px double var(--rule); padding: 22px 0 40px; color: var(--faint); font-size: 13.5px; }
 footer .wrap { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -238,6 +241,23 @@ footer .spacer { flex: 1; }
 
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: rgba(43,43,43,.92); color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 60; }
 .toast.show { opacity: 1; }
+
+/* playful bits */
+.tape { position: absolute; top: -12px; left: 50%; width: 90px; height: 24px; margin-left: -45px; background: rgba(251,227,120,.75); transform: rotate(-3deg); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.index-card { position: relative; transform: rotate(1.2deg); }
+.feat { position: relative; }
+.fe { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; font-size: 20px; margin-bottom: 8px; background: var(--hl-gray); }
+.feat.t-y .fe { background: var(--hl-yellow); } .feat.t-b .fe { background: var(--hl-blue); } .feat.t-g .fe { background: var(--hl-green); }
+.feat.t-p .fe { background: var(--hl-pink); } .feat.t-o .fe { background: var(--hl-purple); }
+.swipe-hint { display: none; }
+.card-h .ci { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 16px; background: var(--hl-gray); flex-shrink: 0; }
+.card.t-y .ci { background: var(--hl-yellow); } .card.t-b .ci { background: var(--hl-blue); } .card.t-g .ci { background: var(--hl-green); }
+.card.t-p .ci { background: var(--hl-pink); } .card.t-o .ci { background: var(--hl-purple); }
+.card-h .tw { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; }
+.card-h .tw .tag { margin-left: auto; }
+.card.flash { box-shadow: 0 0 0 3px var(--blue-bg), 0 0 0 4px var(--blue); transition: box-shadow .3s; }
+.jump { display: none; }
+.chip { border: 1px solid var(--rule); background: var(--sheet); border-radius: 999px; padding: 6px 12px; font-size: 13.5px; white-space: nowrap; flex-shrink: 0; }
 
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; padding-top: 40px; gap: 28px; }
@@ -251,12 +271,92 @@ footer .spacer { flex: 1; }
   .wl { grid-template-columns: 1fr; gap: 20px; }
 }
 @media (max-width: 560px) {
-  .wrap { padding: 0 16px; }
-  .mast nav { margin-left: 0; width: 100%; gap: 6px 14px; flex-wrap: wrap; font-size: 14px; }
-  .features { grid-template-columns: 1fr; }
-  .feat { border-right: 0 !important; }
+  body { line-height: 1.65; }
+  .wrap { padding: 0 18px; }
+  /* masthead: the name and one friendly button */
+  .mast { position: sticky; top: 0; z-index: 40; background: var(--paper); }
+  .mast .wrap { padding-top: 12px; padding-bottom: 10px; align-items: center; flex-wrap: nowrap; }
+  .brand { font-size: 26px; }
+  .brand { white-space: nowrap; }
+  .brand small { font-size: 17px; }
+  .brand small .en { display: none; }
+  .mast nav { margin-left: auto; gap: 0; }
+  .mast nav a:not(.cta) { display: none; }
+  .mast nav .long { display: none; }
+  .mast nav .short { display: inline; }
+  .mast nav a.cta { background: var(--blue); color: #fff; border-radius: 999px; padding: 6px 14px; font-size: 14px; text-decoration: none; }
+
+  /* hero: room to breathe */
+  .hero { padding: 36px 0 52px; gap: 44px; }
+  .hero h1 { font-size: 40px; line-height: 1.12; margin-bottom: 20px; }
+  .hero p.lede { font-size: 17px; margin-bottom: 28px; }
+  .hero .row { flex-direction: column; gap: 10px; }
+  .hero .row .btn { justify-content: center; padding: 14px 18px; border-radius: 12px; font-size: 16px; }
+  .hero .note { text-align: center; font-size: 21px; margin-top: 18px; }
+  .index-card { margin: 0 6px; }
+
+  /* sections */
+  .sec { padding: 52px 0; }
+  .sec > .wrap > h2 { font-size: 32px; }
+  .sec > .wrap > p.sub { font-size: 15.5px; margin-bottom: 22px; }
+
+  /* features: a swipeable row of colourful cards */
+  .swipe-hint { display: block; font-family: Caveat, cursive; font-size: 20px; color: var(--faint); text-align: right; margin: -8px 0 6px; }
+  .features { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; border: 0; background: none;
+    margin: 0 -18px; padding: 4px 18px 16px; scrollbar-width: none; }
+  .features::-webkit-scrollbar { display: none; }
+  .feat { flex: 0 0 80%; scroll-snap-align: center; border: 1px solid var(--rule) !important; border-radius: 16px; background: var(--sheet); padding: 20px 20px 22px; box-shadow: 0 2px 0 var(--rule2); }
+  .feat h3 { font-size: 22px; }
+  .feat p { font-size: 15px; line-height: 1.6; }
+  .feat .n { display: none; }
+
+  /* desk: jump chips + roomier cards */
+  .jump { display: flex; gap: 8px; overflow-x: auto; margin: 0 -18px 12px; padding: 8px 18px; position: sticky; top: 64px; z-index: 30;
+    background: var(--paper); scrollbar-width: none; }
+  .jump::-webkit-scrollbar { display: none; }
+  .desk-bar { margin-bottom: 18px; }
+  .desk { gap: 26px; }
+  .card { border-radius: 16px; scroll-margin-top: 128px; }
+  .card-h { padding: 12px 14px 12px 8px; }
+  .card-h .tw { flex-direction: column; gap: 0; align-items: flex-start; }
+  .card-h .tw .tag { margin-left: 0; font-size: 12px; }
+  .card-b { padding: 18px 18px 20px; }
+  .greet { font-size: 24px; }
+  .next { padding: 14px 16px; border-radius: 12px; }
+  .subpages { gap: 6px; margin-bottom: 16px; }
+  .subpages button { padding: 6px 10px; border-radius: 999px; }
+  table.grid th, table.grid td { padding: 8px; }
+  table.grid input { width: 100%; }
+  .att-row { flex-wrap: wrap; padding: 10px 0; gap: 4px 10px; }
+  .att-row .d { width: auto; font-weight: 700; color: var(--ink); }
+  .att-row .seg button { padding: 6px 12px; }
+  .att-add { flex-wrap: wrap; }
+  .att-add button { padding: 8px 12px; }
   .cols3 { grid-template-columns: 1fr; }
-  .att-row .d { width: 96px; }
+  .note { line-height: 1.65; }
+  .callout { padding: 12px 14px; border-radius: 10px; }
+  .tg > div { margin-left: 8px; padding-left: 12px; }
+  .task-add input[type=text] { flex-basis: 100%; padding: 10px 12px; border-radius: 10px; }
+  .task-add select, .task-add input[type=date] { flex: 1; padding: 8px; border-radius: 10px; }
+  .task-add button { padding: 8px 16px; border-radius: 10px; }
+  .task { padding: 6px 0; }
+  .task .x { visibility: visible; }
+  .tabs { overflow-x: auto; scrollbar-width: none; }
+  .tabs button { white-space: nowrap; padding: 8px 12px; }
+  .prompt { padding: 12px 14px; border-radius: 12px; }
+  .nb-tools { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 8px; }
+  .nb-tools::-webkit-scrollbar { display: none; }
+  .nb-tools button { flex-shrink: 0; height: 38px; min-width: 38px; }
+  .nb-tools .pg { margin-left: 8px; white-space: nowrap; }
+  .nb-stage { padding: 10px; }
+
+  /* waitlist */
+  .wl form { padding: 22px 18px; border-radius: 16px; box-shadow: 0 2px 0 var(--rule2); }
+  .wl input[type=email], .wl textarea { border-radius: 12px; padding: 12px 14px; }
+  .wl form .btn { width: 100%; justify-content: center; padding: 14px; border-radius: 12px; font-size: 16px; }
+  footer { padding-bottom: 40px; }
+  footer .wrap { flex-direction: column; gap: 8px; }
+
 }
 </style>
 </head>
@@ -264,12 +364,12 @@ footer .spacer { flex: 1; }
 
 <header class="mast">
   <div class="wrap">
-    <a class="brand" href="/landing">Kagoj <small>কাগজ · paper</small></a>
+    <a class="brand" href="/landing">Kagoj <small>কাগজ<span class="en"> · paper</span></small></a>
     <nav>
       <a href="#features">What it does</a>
       <a href="#desk">Try it</a>
       <a href="/">Sign in</a>
-      <a class="cta" href="#waitlist">Join the waitlist →</a>
+      <a class="cta" href="#waitlist"><span class="long">Join the waitlist →</span><span class="short">✍️ Join</span></a>
     </nav>
   </div>
 </header>
@@ -287,6 +387,7 @@ footer .spacer { flex: 1; }
       <div class="note">no ads, no feeds, no AI clutter. just paper.</div>
     </div>
     <div class="index-card" aria-hidden="true">
+      <span class="tape"></span>
       <h3>Today</h3>
       <ul>
         <li class="done">Mark FIN245 attendance</li>
@@ -304,16 +405,17 @@ footer .spacer { flex: 1; }
       <div class="kicker">What it does</div>
       <h2>A desk, not a dashboard.</h2>
       <p class="sub">Kagoj does a few things carefully. It works offline, syncs between your iPad, laptop and phone, and keeps a history of every page.</p>
+      <div class="swipe-hint">swipe for more →</div>
       <div class="features">
-        <div class="feat"><h3><span class="n">i.</span>Pages &amp; blocks</h3><p>Headings, toggles, callouts, columns, tables, code, maths (KaTeX), diagrams (Mermaid), highlights in six colours. Type <b>/</b> for anything.</p></div>
-        <div class="feat"><h3><span class="n">ii.</span>Databases</h3><p>Table, board, list, gallery, calendar, timeline and chart views. Formulas, templates, repeating rows, side peek.</p></div>
-        <div class="feat"><h3><span class="n">iii.</span>Calendar &amp; reminders</h3><p>Classes repeat every Thursday and Saturday. Tasks with dates show up on the calendar, on Home and as reminders.</p></div>
-        <div class="feat"><h3><span class="n">iv.</span>Handwriting</h3><p>GoodNotes-style notebooks for Apple Pencil: pen, highlighter, eraser, lasso. Your palm is ignored and fingers scroll. Swipe to turn the page. Handwriting converts to text.</p></div>
-        <div class="feat"><h3><span class="n">v.</span>Home that talks back</h3><p>A different greeting each time. It tells you what's next ("INB372 at 11:20"), asks for attendance after class, and lets you jot a task.</p></div>
-        <div class="feat"><h3><span class="n">vi.</span>Sections</h3><p>Personal, University, Work. Each course gets attendance, marks, notes and a task list, all wired together.</p></div>
-        <div class="feat"><h3><span class="n">vii.</span>A work drawer</h3><p>Projects with quick tasks, plus a shelf for prompts, skills, markdown files and links you keep reusing.</p></div>
-        <div class="feat"><h3><span class="n">viii.</span>Offline &amp; synced</h3><p>Everything is saved on the device first, then synced. If two devices edit the same page, both edits are merged block by block.</p></div>
-        <div class="feat"><h3><span class="n">ix.</span>Yours to take</h3><p>Version history for every page. Export to Markdown or CSV and import them back. No lock-in.</p></div>
+        <div class="feat t-y"><span class="fe">📝</span><h3><span class="n">i.</span>Pages &amp; blocks</h3><p>Headings, toggles, callouts, columns, tables, code, maths (KaTeX), diagrams (Mermaid), highlights in six colours. Type <b>/</b> for anything.</p></div>
+        <div class="feat t-b"><span class="fe">🗂️</span><h3><span class="n">ii.</span>Databases</h3><p>Table, board, list, gallery, calendar, timeline and chart views. Formulas, templates, repeating rows, side peek.</p></div>
+        <div class="feat t-g"><span class="fe">📅</span><h3><span class="n">iii.</span>Calendar &amp; reminders</h3><p>Classes repeat every Thursday and Saturday. Tasks with dates show up on the calendar, on Home and as reminders.</p></div>
+        <div class="feat t-p"><span class="fe">✍️</span><h3><span class="n">iv.</span>Handwriting</h3><p>GoodNotes-style notebooks for Apple Pencil: pen, highlighter, eraser, lasso. Your palm is ignored and fingers scroll. Swipe to turn the page. Handwriting converts to text.</p></div>
+        <div class="feat t-o"><span class="fe">👋</span><h3><span class="n">v.</span>Home that talks back</h3><p>A different greeting each time. It tells you what's next ("INB372 at 11:20"), asks for attendance after class, and lets you jot a task.</p></div>
+        <div class="feat t-b"><span class="fe">📚</span><h3><span class="n">vi.</span>Sections</h3><p>Personal, University, Work. Each course gets attendance, marks, notes and a task list, all wired together.</p></div>
+        <div class="feat t-y"><span class="fe">💼</span><h3><span class="n">vii.</span>A work drawer</h3><p>Projects with quick tasks, plus a shelf for prompts, skills, markdown files and links you keep reusing.</p></div>
+        <div class="feat t-g"><span class="fe">☁️</span><h3><span class="n">viii.</span>Offline &amp; synced</h3><p>Everything is saved on the device first, then synced. If two devices edit the same page, both edits are merged block by block.</p></div>
+        <div class="feat t-p"><span class="fe">🎒</span><h3><span class="n">ix.</span>Yours to take</h3><p>Version history for every page. Export to Markdown or CSV and import them back. No lock-in.</p></div>
       </div>
     </div>
   </section>
@@ -323,6 +425,7 @@ footer .spacer { flex: 1; }
       <div class="kicker">Try it</div>
       <h2>The desk.</h2>
       <p class="sub">These are real pieces of a Kagoj setup, cut out and left on a desk. Drag them by the <b>⠿</b> handle to rearrange, widen them, tick things off, type in them, and write in the notebook. Nothing here is saved anywhere except your own browser.</p>
+      <div class="jump" id="deskJump" aria-label="Jump to a card"></div>
       <div class="desk-bar"><span id="deskHint">Tip: drag a card by its handle.</span><span class="spacer"></span><button type="button" id="deskReset">Reset the desk</button></div>
       <div class="desk" id="deskGrid"></div>
     </div>
@@ -333,12 +436,13 @@ footer .spacer { flex: 1; }
       <div>
         <div class="kicker">Waitlist</div>
         <h2 style="font-size:34px;margin:0 0 10px">Want a notebook of your own?</h2>
-        <p style="color:var(--soft)">Kagoj is small and personal, so accounts are handed out by hand. Leave your email and I'll write to you myself.</p>
+        <p style="color:var(--soft)">Kagoj is small and personal, so accounts are handed out by hand. Leave your email and I'll write to you myself, within 24 hours.</p>
         <ol>
           <li>You leave your email below. No password, no account yet.</li>
           <li>I read every one and set up your space, with sections ready for your courses or work if you tell me about them.</li>
-          <li>You get a personal email with your login. Add Kagoj to your iPad or phone home screen and start writing.</li>
+          <li>Within 24 hours you get a personal email with your login. Add Kagoj to your iPad or phone home screen and start writing.</li>
         </ol>
+        <div class="perk"><span class="perk-ico">🎁</span><div><b>First 50 sign-ups:</b> I’ll make templates for you by hand, for your courses, your work or your chaos.</div></div>
       </div>
       <form id="wlForm" novalidate>
         <label for="wlEmail">Your email</label>
@@ -431,7 +535,7 @@ footer .spacer { flex: 1; }
   // ---------- blocks ----------
   var BLOCKS = {};
 
-  BLOCKS.home = { title: 'Home', tag: 'the first thing you see', render: function (b) {
+  BLOCKS.home = { ico: '👋', tint: 'b', title: 'Home', tag: 'the first thing you see', render: function (b) {
     var GREET = [
       'Morning, scholar. The coffee is on you.', 'Back again? The pages missed you.', 'Hello, you. Let’s make today legible.',
       'Pencil sharpened? Let’s go.', 'Another day, another tidy page.', 'Look who opened their notebook.',
@@ -457,7 +561,7 @@ footer .spacer { flex: 1; }
       el('button', { cls: 'mini', type: 'button', text: 'New greeting', onclick: draw })]));
   } };
 
-  BLOCKS.course = { title: 'Course · FIN245', tag: 'University section', wide: false, render: function (b) {
+  BLOCKS.course = { ico: '💰', tint: 'y', title: 'Course · FIN245', tag: 'University section', wide: false, render: function (b) {
     var marks = state.marks || { q1: 8, q2: '', mid: 21, asg: '', pres: '', fin: '' };
     var MAX = { q1: 10, q2: 10, mid: 30, asg: 10, pres: 10, fin: 40 };
     var NAMES = { q1: 'Quiz 1', q2: 'Quiz 2', mid: 'Mid', asg: 'Assignment', pres: 'Presentation', fin: 'Final' };
@@ -505,7 +609,7 @@ footer .spacer { flex: 1; }
     show(cur);
   } };
 
-  BLOCKS.attendance = { title: 'Attendance · LAW200', tag: 'live summary', render: function (b) {
+  BLOCKS.attendance = { ico: '📅', tint: 'g', title: 'Attendance · LAW200', tag: 'live summary', render: function (b) {
     // sample term: Thursdays and Saturdays from late September
     var rows = state.att;
     if (!rows) {
@@ -548,7 +652,7 @@ footer .spacer { flex: 1; }
     draw();
   } };
 
-  BLOCKS.note = { title: 'Notes · LAW200', tag: 'a piece of the real note', wide: true, render: function (b) {
+  BLOCKS.note = { ico: '⚖️', tint: 'p', title: 'Notes · LAW200', tag: 'a piece of the real note', wide: true, render: function (b) {
     b.classList.add('note');
     b.innerHTML =
       '<div class="callout gray"><span class="i">🎓</span><div><span class="c-gray"><b>LAW OF CONTRACT</b></span><br><b>Study Notes</b> · Definition, Enforceability, Offer, Acceptance, Postal Rule</div></div>' +
@@ -596,7 +700,7 @@ footer .spacer { flex: 1; }
     { t: 'KaTeX supported functions', d: 'docs' }
   ];
 
-  BLOCKS.work = { title: 'Work · prompts & links', tag: 'Work section', render: function (b) {
+  BLOCKS.work = { ico: '💼', tint: 'o', title: 'Work · prompts & links', tag: 'Work section', render: function (b) {
     var mine = state.prompts || [];
     var tabs = el('div', { cls: 'tabs' });
     var body = el('div');
@@ -637,7 +741,7 @@ footer .spacer { flex: 1; }
     draw();
   } };
 
-  BLOCKS.tasks = { title: 'Quick tasks', tag: 'Home · task lists', render: function (b) {
+  BLOCKS.tasks = { ico: '✅', tint: 'g', title: 'Quick tasks', tag: 'Home · task lists', render: function (b) {
     var LISTS = ['Random', 'Baazar', 'StudyNex', 'FIN245', 'INB372', 'LAW200'];
     var today = new Date();
     function plus(n) { return iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() + n)); }
@@ -683,7 +787,7 @@ footer .spacer { flex: 1; }
     draw();
   } };
 
-  BLOCKS.notebook = { title: 'Notebook', tag: 'handwriting · try a Pencil', wide: true, render: function (b) {
+  BLOCKS.notebook = { ico: '✍️', tint: 'b', title: 'Notebook', tag: 'handwriting · try a Pencil', wide: true, render: function (b) {
     b.style.padding = '0';
     var PENS = { pen: ['#1F1F1F', '#1E4FD8', '#D0312D', '#1E8A44'], highlighter: ['#FFE34D', '#8CE68C', '#FF8FC7', '#7FC8FF'] };
     var tool = 'pen', colors = { pen: '#1F1F1F', highlighter: '#FFE34D' }, sizes = { pen: 2.5, highlighter: 18, eraser: 18 };
@@ -835,8 +939,8 @@ footer .spacer { flex: 1; }
     var def = BLOCKS[k];
     var grip = el('button', { type: 'button', cls: 'grip', title: 'Drag to move', 'aria-label': 'Move ' + def.title, html: '<svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true"><circle cx="4" cy="3" r="1.6"/><circle cx="10" cy="3" r="1.6"/><circle cx="4" cy="9" r="1.6"/><circle cx="10" cy="9" r="1.6"/><circle cx="4" cy="15" r="1.6"/><circle cx="10" cy="15" r="1.6"/></svg>' });
     var size = el('button', { type: 'button', cls: 'size', title: 'Wider / narrower', 'aria-label': 'Toggle width', text: isWide(k) ? '⇥⇤' : '⇤⇥' });
-    var card = el('article', { cls: 'card' + (isWide(k) ? ' wide' : ''), 'data-k': k }, [
-      el('div', { cls: 'card-h' }, [grip, el('span', { cls: 't', text: def.title }), el('span', { cls: 'tag', text: def.tag }), size])
+    var card = el('article', { cls: 'card t-' + def.tint + (isWide(k) ? ' wide' : ''), 'data-k': k, id: 'card-' + k }, [
+      el('div', { cls: 'card-h' }, [grip, el('span', { cls: 'ci', text: def.ico }), el('div', { cls: 'tw' }, [el('span', { cls: 't', text: def.title }), el('span', { cls: 'tag', text: def.tag })]), size])
     ]);
     var body = el('div', { cls: 'card-b' });
     card.appendChild(body);
@@ -860,10 +964,21 @@ footer .spacer { flex: 1; }
   function saveOrder() {
     state.order = Array.prototype.map.call(deskEl.children, function (c) { return c.getAttribute('data-k'); });
     save();
+    renderJump();
   }
   function renderDesk() {
     deskEl.innerHTML = '';
     order().forEach(function (k) { deskEl.appendChild(buildCard(k)); });
+    renderJump();
+  }
+  function renderJump() {
+    var jump = document.getElementById('deskJump');
+    jump.innerHTML = '';
+    Array.prototype.map.call(deskEl.children, function (c) { return c.getAttribute('data-k'); }).forEach(function (k) {
+      jump.appendChild(el('button', { type: 'button', cls: 'chip t-' + BLOCKS[k].tint, text: BLOCKS[k].ico + ' ' + BLOCKS[k].title.split(' · ')[0], onclick: function () {
+        var c = document.getElementById('card-' + k); if (c) { c.scrollIntoView({ block: 'start' }); c.classList.add('flash'); setTimeout(function () { c.classList.remove('flash'); }, 900); }
+      } }));
+    });
   }
 
   function startDrag(e, card) {
@@ -915,6 +1030,7 @@ footer .spacer { flex: 1; }
     state = {}; save(); renderDesk(); toast('Desk reset');
   });
   renderDesk();
+
 
   // ---------- waitlist ----------
   var form = document.getElementById('wlForm'), msg = document.getElementById('wlMsg'), btn = document.getElementById('wlBtn');
