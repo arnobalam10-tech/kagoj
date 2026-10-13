@@ -97,7 +97,10 @@
       var v = K.BlockViews[b.type](b, this, entry);
       if (v) { body.appendChild(v); }
     } else {
-      body.appendChild(D.el('div.blk-unknown', { text: 'Unsupported block (' + b.type + ')' }));
+      // usually a block from a newer version than this open tab is running
+      var upd = D.el('button.small-btn', { type: 'button', text: 'Update now' });
+      D.tap(upd, function () { if (K.shell && K.shell.refresh) { K.shell.refresh(); } else { location.reload(); } });
+      body.appendChild(D.el('div.blk-unknown', { contenteditable: 'false' }, [D.el('span', { text: 'This block needs the latest version of Kagoj. ' }), upd]));
     }
     if (b.conflict) {
       var note = D.el('div.conflict-note', null, [D.el('span', { text: 'Edited on another device at the same time. Keep both, or delete one.' })]);

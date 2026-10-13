@@ -303,3 +303,8 @@ html.dark { background: #1C1C1C; }
 .sb-section.drop-in { background: rgba(47,93,168,0.15); }
 .sb-sec-empty { padding-left: 30px; }
 .sb-section .tree-act, .sb-sec-name span { -webkit-box-flex: 0; -webkit-flex: none; flex: none; padding: 0; }
+.update-pill { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 150; display: flex; align-items: center; gap: 10px;
+  border: 0; border-radius: 999px; padding: 10px 10px 10px 16px; background: #2B2B2B; color: #fff; font-size: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.25); cursor: pointer; white-space: nowrap; }
+.update-pill b { background: #fff; color: #2B2B2B; border-radius: 999px; padding: 4px 12px; font-size: 13px; }
+.dark .update-pill { background: #E8E6E1; color: #1C1C1C; }
+.dark .update-pill b { background: #1C1C1C; color: #E8E6E1; }

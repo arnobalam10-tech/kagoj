@@ -67,7 +67,7 @@
 .blk.conflict > .blk-body { box-shadow: 0 0 0 2px #E8B4B4; }
 .conflict-note { font-size: 13px; color: #A8322D; padding: 4px 2px; }
 .conflict-note .small-btn { height: 28px; margin-left: 8px; }
-.blk-unknown { color: #A39E94; font-size: 13px; padding: 4px 0; }
+.blk-unknown { color: #A39E94; font-size: 13px; padding: 4px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
 /* colours (text and highlight, words or whole blocks) */
 .c-gray { color: #787774; } .c-brown { color: #9F6B53; } .c-orange { color: #D9730D; } .c-yellow { color: #CB912F; } .c-green { color: #448361; }

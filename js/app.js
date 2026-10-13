@@ -70,6 +70,34 @@
   function watchAppCache() {
     if (!window.KAGOJ_BUNDLES || !navigator.serviceWorker) { return; }
     navigator.serviceWorker.register('/sw.js').catch(function (e) { K.log.warn('service worker: ' + (e && e.message)); });
+    watchDeploys();
+  }
+
+  // A tab left open keeps running the version it started with. Check now and
+  // then (and when the app comes back to the front) whether a newer build is
+  // live; if so, offer a one-tap update.
+  var pill = null, lastCheck = 0;
+  function watchDeploys() {
+    var me = document.querySelector('script[src*="/assets/core."]');
+    var mine = me ? me.getAttribute('src') : '';
+    if (!mine || !window.fetch) { return; }
+    function check() {
+      if (pill || Date.now() - lastCheck < 60000 || !navigator.onLine) { return; }
+      lastCheck = Date.now();
+      fetch('/?check=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (html) {
+        var m = /\/assets\/core\.[0-9a-f]+\.js/.exec(html || '');
+        if (m && m[0] !== mine) { showPill(); }
+      }).catch(function () { /* offline */ });
+    }
+    setInterval(check, 10 * 60000);
+    D.on(document, 'visibilitychange', function () { if (!document.hidden) { check(); } });
+    setTimeout(check, 30000);
+  }
+  function showPill() {
+    app.updateReady = true;
+    pill = D.el('button.update-pill', { type: 'button' }, [D.el('span', { text: '✨ New version of Kagoj' }), D.el('b', { text: 'Update' })]);
+    D.tap(pill, function () { if (K.shell && K.shell.refresh) { K.shell.refresh(); } else { location.reload(); } });
+    document.body.appendChild(pill);
   }
 
   function fatal(msg) {
