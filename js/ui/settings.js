@@ -153,17 +153,8 @@
     body.appendChild(section('Writing', [
       row('Open the last page or notebook on launch (instead of Home)', toggle(p.reopenLast, function (v) { K.prefs.set('reopenLast', v); })),
       row('Default zoom', segmented([['auto', 'Auto'], ['width', 'Fit width'], ['page', 'Fit page']], p.fitMode, function (v) { K.prefs.set('fitMode', v); }),
-        'Auto: whole page in portrait, page width in landscape')
-    ]));
-
-    body.appendChild(section('Palm rejection', [
-      row('Writing band', toggle(!!p.band, function (v) { K.prefs.set('band', v); }),
-        'Only touches inside a strip of a few lines write; \u25B2\u25BC move it. Also in the notebook top bar.'),
-      row('Band height', segmented([[3, '3 lines'], [4, '4 lines'], [5, '5 lines']], p.bandLines || 4, function (v) { K.prefs.set('bandLines', v); })),
-      row('Pencil only', toggle(p.pencilOnly, function (v) { K.prefs.set('pencilOnly', v); }),
-        'Apple Pencil writes; fingers scroll and zoom (newer iPads)'),
-      row('Wrist guard', toggle(!!p.wristGuard, function (v) { K.prefs.set('wristGuard', v ? 140 : 0); }),
-        'Ignore touches in a strip at the bottom of the page; drag its edge to resize')
+        'Auto: whole page in portrait, page width in landscape'),
+      row('Apple Pencil', D.el('span.muted', { text: 'Always on' }), 'Only the Pencil writes. One finger scrolls, two fingers zoom, a sideways flick turns the page (past the last page adds a new one).')
     ]));
 
     body.appendChild(deletedSection());

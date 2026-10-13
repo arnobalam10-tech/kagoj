@@ -192,3 +192,22 @@ update storage.buckets set allowed_mime_types = null where id = 'uploads';
 -- Migration kagoj_v2_sections: sidebar sections are top-level docs of kind 'section'
 alter table public.docs drop constraint docs_kind_check;
 alter table public.docs add constraint docs_kind_check check (kind in ('page','database','row','canvas','section'));
+
+-- ---------- kagoj_waitlist (landing page) ----------
+-- Visitors on /landing leave an email; anyone may insert, only the owner reads.
+create table if not exists public.waitlist (
+  id bigint generated always as identity primary key,
+  email text not null,
+  note text,
+  created_at timestamptz not null default now(),
+  constraint waitlist_email_ok check (char_length(email) between 5 and 200 and email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
+  constraint waitlist_note_len check (note is null or char_length(note) <= 500)
+);
+create unique index if not exists waitlist_email_uniq on public.waitlist (lower(email));
+alter table public.waitlist enable row level security;
+revoke all on public.waitlist from anon, authenticated;
+grant insert (email, note) on public.waitlist to anon, authenticated;
+grant select, delete on public.waitlist to authenticated;
+create policy waitlist_insert on public.waitlist for insert to anon, authenticated with check (true);
+create policy waitlist_owner_read on public.waitlist for select to authenticated using (auth.uid() = '336b0662-2fdf-4503-9fdf-75244b9f742a'::uuid);
+create policy waitlist_owner_delete on public.waitlist for delete to authenticated using (auth.uid() = '336b0662-2fdf-4503-9fdf-75244b9f742a'::uuid);

@@ -60,6 +60,8 @@
       });
       children.push(local);
     }
+    // new here: the landing page explains Kagoj and has the waitlist
+    children.push(D.el('p.login-new', null, [D.el('a', { href: '/landing', text: 'New here? See what Kagoj is and join the waitlist' })]));
     root.appendChild(D.el('div.login-wrap.scrolls', null, D.el('div.login-box', null, children)));
   };
 

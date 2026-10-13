@@ -7,6 +7,7 @@ var types = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascrip
 http.createServer(function (req, res) {
   var p = decodeURIComponent(req.url.split('?')[0]);
   if (p.endsWith('/')) p += 'index.html';
+  if (p === '/landing') p = '/landing.html';
   var f = path.join(root, p);
   if (p.indexOf('/vendor/pdfjs/') === 0 && !fs.existsSync(f)) {
     f = path.join(__dirname, '..', 'node_modules', 'pdfjs-dist', 'legacy', 'build', path.basename(p));

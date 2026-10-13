@@ -2,7 +2,7 @@
   "name": "kagoj",
   "version": "2.0.0",
   "private": true,
-  "description": "Kagoj — personal handwriting notebook (ES5, no runtime deps)",
+  "description": "Kagoj — personal notebook: pages, databases, calendar, Apple Pencil notebooks (no runtime deps)",
   "scripts": {
     "lint": "eslint js spike/spike.js",
     "build": "node scripts/build.js",

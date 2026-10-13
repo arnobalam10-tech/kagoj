@@ -24,7 +24,7 @@ var ctx = vm.createContext(Object.assign(win, {
   Uint8Array: Uint8Array, document: { addEventListener: function () {} }
 }));
 ['js/config.js', 'js/core/util.js', 'js/core/dom.js', 'js/core/log.js', 'js/draw/geometry.js', 'js/draw/codec.js',
- 'js/draw/eraser.js', 'js/draw/history.js', 'js/draw/viewport.js', 'js/draw/band.js', 'js/draw/input.js', 'js/hw/handwriting.js'].forEach(function (f) {
+ 'js/draw/eraser.js', 'js/draw/history.js', 'js/draw/viewport.js', 'js/draw/input.js', 'js/hw/handwriting.js'].forEach(function (f) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
 });
 var K = win.Kagoj;
@@ -167,34 +167,33 @@ test('viewport fits a landscape (slide) page', function () {
   assert.ok(v.oy > 24);   // centred vertically
 });
 
-console.log('palm rejection (input)');
-function palmRig(opts) {
+console.log('pencil-only input');
+function palmRig() {
   var log = [];
   var el = { addEventListener: function () {}, removeEventListener: function () {},
     getBoundingClientRect: function () { return { left: 0, top: 0, width: 400, height: 600 }; } };
   var h = { down: function (x, y, k) { log.push('down:' + k); }, move: function () { if (log[log.length - 1] !== 'move') { log.push('move'); } },
     up: function () { log.push('up'); }, cancel: function () { log.push('cancel'); }, gestureStart: function () { log.push('gesture'); },
-    gestureMove: function () {}, gestureEnd: function () { log.push('gestureEnd'); }, wheel: function () {}, pan: function () {} };
-  var inp = new K.Input(el, h);
-  inp.pencilOnly = !!opts.pencilOnly; inp.guardPx = opts.guardPx || 0;
-  return { inp: inp, log: log };
+    gestureMove: function () {}, gestureEnd: function () { log.push('gestureEnd'); }, wheel: function () {}, pan: function () {},
+    swipe: function (d) { log.push('swipe:' + d); } };
+  return { inp: new K.Input(el, h), log: log };
 }
 function T(id, x, y, type) { return { identifier: id, clientX: x, clientY: y, touchType: type }; }
 function ev(changed, all) { return { cancelable: true, preventDefault: function () {}, changedTouches: changed, touches: all }; }
-test('wrist guard: a resting palm does not turn writing into a pinch', function () {
-  var r = palmRig({ guardPx: 140 }), palm = T(1, 200, 560), p = T(2, 100, 100);
-  r.inp.touchStart(ev([palm], [palm]));
-  r.inp.touchStart(ev([p], [palm, p]));
-  p = T(2, 130, 110); r.inp.touchMove(ev([p], [palm, p]));
-  r.inp.touchEnd(ev([p], [palm]));
-  assert.strictEqual(r.log.join(' '), 'down:touch move up');
+test('a finger never writes: it scrolls once it moves, a resting palm does nothing', function () {
+  var r = palmRig();
+  var f = T(1, 100, 300, 'direct'); r.inp.touchStart(ev([f], [f]));
+  f = T(1, 102, 302, 'direct'); r.inp.touchMove(ev([f], [f]));
+  r.inp.touchEnd(ev([f], []));
+  assert.strictEqual(r.log.join(' '), '');
+  f = T(2, 100, 300, 'direct'); r.inp.touchStart(ev([f], [f]));
+  f = T(2, 100, 200, 'direct'); r.inp.touchMove(ev([f], [f]));
+  r.inp.touchEnd(ev([f], []));
+  assert.strictEqual(r.log.join(' '), 'down:finger-pan move up');
   r.inp.destroy();
 });
-test('pencil only: fingers pan, the Pencil writes even with palms down', function () {
-  var r = palmRig({ pencilOnly: true });
-  var f = T(1, 100, 300, 'direct'); r.inp.touchStart(ev([f], [f])); r.inp.touchEnd(ev([f], []));
-  assert.strictEqual(r.log.join(' '), 'down:finger-pan up');
-  r.log.length = 0;
+test('the Pencil writes even with palms down', function () {
+  var r = palmRig();
   var palm = T(5, 250, 400, 'direct'), pen = T(6, 80, 120, 'stylus'), palm2 = T(7, 300, 420, 'direct');
   r.inp.touchStart(ev([palm], [palm]));
   r.inp.touchStart(ev([pen], [palm, pen]));
@@ -202,48 +201,25 @@ test('pencil only: fingers pan, the Pencil writes even with palms down', functio
   r.inp.touchStart(ev([palm2], [palm, pen, palm2]));
   pen = T(6, 120, 120, 'stylus'); r.inp.touchMove(ev([pen], [palm, pen, palm2]));
   r.inp.touchEnd(ev([pen], [palm, palm2]));
-  assert.strictEqual(r.log.join(' '), 'down:finger-pan up down:touch move up');
+  assert.strictEqual(r.log.join(' '), 'down:pen move up');
   r.inp.destroy();
 });
-test('pencil only: two fingers still pinch-zoom', function () {
-  var r = palmRig({ pencilOnly: true }), a = T(1, 100, 100, 'direct'), b = T(2, 200, 200, 'direct');
+test('two fingers pinch-zoom', function () {
+  var r = palmRig(), a = T(1, 100, 100, 'direct'), b = T(2, 200, 200, 'direct');
   r.inp.touchStart(ev([a], [a])); r.inp.touchStart(ev([b], [a, b])); r.inp.touchEnd(ev([a, b], []));
-  assert.strictEqual(r.log.join(' '), 'down:finger-pan cancel gesture gestureEnd');
+  assert.strictEqual(r.log.join(' '), 'gesture gestureEnd');
   r.inp.destroy();
 });
-
-console.log('writing band');
-test('band snaps to ruled rows and stays on the page', function () {
-  var B = K.band;
-  assert.strictEqual(B.height(4), 4 * 36 + 12);
-  assert.strictEqual(B.initial(4, 1414), 74 - 6);          // first row starts at 74 (first line 110)
-  assert.strictEqual(B.snap(100, 4, 1414), 74 + 36 - 6);    // nearest row
-  assert.strictEqual(B.step(68, 4, 1414, 1), 68 + 144);     // next 4 lines
-  assert.strictEqual(B.step(68, 4, 1414, -1), 0);           // clamped at the top
-  var last = B.snap(5000, 4, 1414);
-  assert.ok(last + B.height(4) <= 1414 && last > 1200);
-  assert.ok(B.contains(68, 4, 100, 0) && !B.contains(68, 4, 300, 0));
-});
-test('band: touches outside are ignored, so a palm never becomes a pinch', function () {
-  var log = [];
-  var el = { addEventListener: function () {}, removeEventListener: function () {},
-    getBoundingClientRect: function () { return { left: 0, top: 0, width: 400, height: 600 }; } };
-  var h = { down: function () { log.push('down'); }, move: function () { if (log[log.length - 1] !== 'move') { log.push('move'); } },
-    up: function () { log.push('up'); }, cancel: function () { log.push('cancel'); }, gestureStart: function () { log.push('gesture'); },
-    gestureMove: function () {}, gestureEnd: function () {}, wheel: function () {}, pan: function () {},
-    acceptsTouch: function (x, y) { return y >= 100 && y <= 200; } };
-  var inp = new K.Input(el, h);
-  function T(id, x, y) { return { identifier: id, clientX: x, clientY: y }; }
-  function ev(c, a) { return { cancelable: true, preventDefault: function () {}, changedTouches: c, touches: a }; }
-  var palm = T(1, 300, 450);
-  inp.touchStart(ev([palm], [palm]));             // palm below the band: ignored
-  var p = T(2, 50, 150);
-  inp.touchStart(ev([p], [palm, p]));             // finger inside the band: writes
-  p = T(2, 90, 160); inp.touchMove(ev([p], [palm, p]));
-  p = T(2, 120, 260); inp.touchMove(ev([p], [palm, p]));   // may leave the band once started
-  inp.touchEnd(ev([p], [palm]));
-  assert.strictEqual(log.join(' '), 'down move up');
-  inp.destroy();
+test('a sideways flick turns the page (left = next, right = previous)', function () {
+  var r = palmRig();
+  var f = T(1, 300, 300, 'direct'); r.inp.touchStart(ev([f], [f]));
+  f = T(1, 150, 310, 'direct'); r.inp.touchMove(ev([f], [f])); r.inp.touchEnd(ev([f], []));
+  f = T(2, 100, 300, 'direct'); r.inp.touchStart(ev([f], [f]));
+  f = T(2, 260, 290, 'direct'); r.inp.touchMove(ev([f], [f])); r.inp.touchEnd(ev([f], []));
+  f = T(3, 100, 300, 'direct'); r.inp.touchStart(ev([f], [f]));
+  f = T(3, 140, 450, 'direct'); r.inp.touchMove(ev([f], [f])); r.inp.touchEnd(ev([f], []));
+  assert.strictEqual(r.log.join(' '), 'down:finger-pan move up swipe:1 down:finger-pan move up swipe:-1 down:finger-pan move up');
+  r.inp.destroy();
 });
 
 console.log('handwriting to text');

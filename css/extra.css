@@ -110,6 +110,8 @@
 /* ---------- login ---------- */
 .login-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .login-box { width: 340px; max-width: 92%; margin: 0 auto; padding-top: 12%; text-align: center; }
+.login-new { margin-top: 28px; font-size: 14px; }
+.login-new a { color: #5B6470; }
 .logo { margin-bottom: 28px; }
 .logo-word { font-family: Georgia, "Times New Roman", serif; font-size: 52px; color: #2F3640; }
 .logo-bn { font-size: 20px; color: #7A766D; margin-top: -4px; }

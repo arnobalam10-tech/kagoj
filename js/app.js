@@ -65,19 +65,11 @@
   // Which bundle each screen lives in
   app.screenBundle = { workspace: 'canvas', dashboard: ['extra', 'canvas'], uploads: 'extra', folder: 'extra', settings: 'extra', login: 'extra', trash: 'extra', page: ['editor', 'db', 'more'], calendar: ['editor', 'db', 'plan', 'cal'] };
 
-  // Application Cache lets the iOS 9 home-screen app open with no network.
+  // A service worker keeps the app shell and bundles on the device, so the
+  // home-screen app opens with no network. Only in the built app (dist).
   function watchAppCache() {
-    var ac = window.applicationCache;
-    if (!ac) { return; }
-    function ready() {
-      if (ac.status !== 4) { return; } // UPDATEREADY
-      try { ac.swapCache(); } catch (e) { /* ignore */ }
-      app.updateReady = true;
-      K.log('app update downloaded');
-      if (K.router.screenName !== 'workspace') { location.reload(); }
-    }
-    ac.addEventListener('updateready', ready, false);
-    ready();
+    if (!window.KAGOJ_BUNDLES || !navigator.serviceWorker) { return; }
+    navigator.serviceWorker.register('/sw.js').catch(function (e) { K.log.warn('service worker: ' + (e && e.message)); });
   }
 
   function fatal(msg) {

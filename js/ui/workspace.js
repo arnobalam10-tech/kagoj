@@ -45,11 +45,10 @@
         self.pickBar.style.display = n ? '' : 'none';
         self.convBtn.querySelector('.btn-label').textContent = 'Convert ' + n + (n === 1 ? ' stroke' : ' strokes') + ' to text';
       },
-      onStylus: function () { self.offerPencilOnly(); }
+      onSwipe: function (dir) { if (dir > 0) { self.nextPage(); } else { self.goPage(self.pageIdx - 1); } }
     });
     this.selBar.style.display = 'none';
     this.pickBar.style.display = 'none';
-    this.applyPalm();
     this.applyTool();
     this.engine.setReadOnly(this.readOnly);
     this.bindEvents();
@@ -74,21 +73,18 @@
     this.modeBtn = D.button({ icon: this.readOnly ? 'pencil' : 'eye', title: this.readOnly ? 'Write mode' : 'View mode', cls: 'mode-toggle' });
     D.tap(this.modeBtn, function () { self.setReadOnly(!self.readOnly); });
     this.pill = K.statusPill();
+    this.toolbar = new K.Toolbar(this);
     var more = D.button({ icon: 'more', title: 'More' });
     D.tap(more, function () { self.moreMenu(); });
 
     this.top = D.el('header.topbar.ws-top', null, [
       back, D.el('div.title-wrap', null, this.titleBtn), this.undoBtn, this.redoBtn,
-      D.el('div.spacer'), this.pill, this.modeBtn, more
+      D.el('div.spacer'), this.toolbar.nav, this.pill, this.modeBtn, more
     ]);
     this.stage = D.el('div.stage');
     this.msg = D.el('div.stage-msg');
-    this.toolbar = new K.Toolbar(this);
-    this.showBtn = D.button({ icon: 'chevron-down', title: 'Show top bar', cls: 'float-btn' });
-    D.tap(this.showBtn, function () { self.setToolbarsHidden(false); });
-    D.append(this.root, [this.top, this.stage, this.showBtn]);
-    // the floating tool palette lives over the page
-    this.stage.appendChild(this.toolbar.el);
+    // the tool strip sits under the top bar and is always there
+    D.append(this.root, [this.top, this.toolbar.el, this.stage]);
     this.stage.appendChild(this.msg);
     // floating bar while an image is selected
     var del = D.button({ icon: 'trash', label: 'Delete', cls: 'danger' });
@@ -115,11 +111,6 @@
         D.on(el, ev, function (e) { e.stopPropagation(); });
       });
     });
-    // wrist guard (ignored zone at the bottom), height adjustable by its handle
-    this.guard = D.el('div.wrist-guard', null, D.el('div.guard-handle', null, D.el('span', { text: 'Wrist guard ↕' })));
-    this.stage.appendChild(this.guard);
-    this.bindGuard();
-    this.root.classList.toggle('bars-hidden', !!this.prefs.toolbarsHidden);
     this.toolbar.render();
   };
 
@@ -130,14 +121,6 @@
     K.Docs.all().forEach(function (d) { if (d.kind === 'canvas' && d.settings && d.settings.notebook === self.nb.id && K.Docs.isLive(d)) { owner = d; } });
     if (owner && owner.parent_id) { return '#/p/' + owner.parent_id; }
     return owner ? '#/' : '#/notebooks';
-  };
-
-  P.setToolbarsHidden = function (h) {
-    this.prefs.toolbarsHidden = h;
-    K.prefs.set('toolbarsHidden', h);
-    this.root.classList.toggle('bars-hidden', h);
-    this.engine.resize();
-    this.toolbar.reflow();
   };
 
   P.setReadOnly = function (ro) {
@@ -212,6 +195,12 @@
   P.goPage = function (idx) {
     if (idx < 0 || idx >= this.pages.length || idx === this.pageIdx) { return; }
     this.openPage(idx);
+  };
+
+  // Next page, or a fresh one after the last page (like turning to a blank sheet).
+  P.nextPage = function () {
+    if (this.pageIdx >= this.pages.length - 1) { this.addPage(); return; }
+    this.goPage(this.pageIdx + 1);
   };
 
   P.openPage = function (idx, first) {
@@ -305,13 +294,13 @@
       title: 'Page ' + (this.pageIdx + 1),
       items: [
         { label: 'Paper style…', icon: 'paper', onTap: function () { self.paperMenu(); } },
+        { label: 'Add page after this one', icon: 'page-add', onTap: function () { self.addPage(); } },
         { label: 'Page list', icon: 'list', onTap: function () { self.pageList(); } },
         { label: 'Import from Uploads…', icon: 'upload', onTap: function () { self.importFromUploads(); } },
         { label: 'Convert page handwriting to text…', icon: 'text', onTap: function () { self.convertPage(); } },
         { label: 'Fit whole page', icon: 'fit', onTap: function () { self.engine.fit('page'); } },
         { label: 'Fit page width', icon: 'fit', onTap: function () { self.engine.fit('width'); } },
         { label: this.readOnly ? 'Write mode' : 'View mode (no writing)', icon: this.readOnly ? 'pencil' : 'eye', onTap: function () { self.setReadOnly(!self.readOnly); } },
-        { label: 'Hide top bar', icon: 'tools', onTap: function () { self.setToolbarsHidden(true); } },
         { label: 'Clear page', icon: 'clear', danger: true, onTap: function () {
           sheets.confirm({ title: 'Clear this page?', message: 'You can undo this.', ok: 'Clear', danger: true }, function (ok) {
             if (ok) { self.engine.clear(); }
@@ -414,84 +403,6 @@
     this.convertPicked();
   };
 
-  // ---------- palm rejection ----------
-
-  P.toggleBand = function () {
-    var on = !K.prefs.get('band');
-    K.prefs.set('band', on);
-    if (on && this.readOnly) { this.setReadOnly(false); }
-    this.applyPalm();
-    sheets.toast(on ? 'Writing band on: only touches inside the band write. \u25B2\u25BC move it.' : 'Writing band off', 3500);
-  };
-
-  P.toggleWristGuard = function () {
-    var on = !K.prefs.get('wristGuard');
-    K.prefs.set('wristGuard', on ? 140 : 0);
-    this.applyPalm();
-    sheets.toast(on ? 'Wrist guard on: touches in the shaded strip are ignored. Drag its edge to resize.' : 'Wrist guard off', 3500);
-  };
-
-  P.togglePencilOnly = function () {
-    var on = !K.prefs.get('pencilOnly');
-    K.prefs.set('pencilOnly', on);
-    this.applyPalm();
-    sheets.toast(on ? 'Pencil only: fingers scroll and zoom, only the Apple Pencil writes.' : 'Pencil only off', 3500);
-  };
-
-  P.applyPalm = function () {
-    var p = K.prefs.all();
-    this.engine.setBand(!!p.band, p.bandLines || 4);
-    if (this.toolbar) { this.toolbar.render(); }
-    this.engine.input.pencilOnly = !!p.pencilOnly;
-    this.engine.input.guardPx = p.wristGuard || 0;
-    this.guard.style.display = p.wristGuard ? '' : 'none';
-    this.guard.style.height = (p.wristGuard || 0) + 'px';
-  };
-
-  P.bindGuard = function () {
-    var self = this, handle = this.guard.firstChild, startY = 0, startH = 0;
-    function y(e) { return e.touches ? e.touches[0].clientY : e.clientY; }
-    function down(e) {
-      e.stopPropagation();
-      if (e.cancelable) { e.preventDefault(); }
-      startY = y(e); startH = K.prefs.get('wristGuard') || 140;
-      self.guardDrag = true;
-    }
-    function move(e) {
-      if (!self.guardDrag) { return; }
-      e.stopPropagation();
-      if (e.cancelable) { e.preventDefault(); }
-      var h = U.clamp(startH - (y(e) - startY), 60, Math.round(self.stage.clientHeight * 0.7));
-      self.guard.style.height = h + 'px';
-      self.engine.input.guardPx = h;
-    }
-    function up() {
-      if (!self.guardDrag) { return; }
-      self.guardDrag = false;
-      K.prefs.set('wristGuard', parseInt(self.guard.style.height, 10) || 140);
-    }
-    D.on(handle, 'touchstart', down, D.passiveFalse);
-    D.on(handle, 'touchmove', move, D.passiveFalse);
-    D.on(handle, 'touchend', up);
-    D.on(handle, 'mousedown', down);
-    D.on(handle, 'pointerdown', function (e) { e.stopPropagation(); });
-    this.unbind.push(D.on(window, 'mousemove', move));
-    this.unbind.push(D.on(window, 'mouseup', up));
-  };
-
-  P.offerPencilOnly = function () {
-    var self = this;
-    if (K.prefs.get('pencilOnly') || K.prefs.get('pencilAsked')) { return; }
-    K.prefs.set('pencilAsked', true);
-    sheets.confirm({
-      title: 'Apple Pencil detected',
-      message: 'Turn on Pencil-only mode? Only the Pencil writes; fingers scroll and zoom, and your palm is ignored. You can change this in Settings.',
-      ok: 'Turn on'
-    }, function (ok) {
-      if (ok) { K.prefs.set('pencilOnly', true); self.applyPalm(); }
-    });
-  };
-
   // ---------- saving ----------
 
   P.scheduleSave = function (pageId) {
@@ -526,7 +437,6 @@
     u.push(D.on(document, 'keyup', function (e) { if (e.keyCode === 32) { self.engine.input.spaceHeld = false; } }));
     this.onResize = function () {
       self.engine.resize();
-      self.toolbar.reflow();
     };
     K.app.on('resize', this.onResize);
     this.onHide = function () { self.flushSave(); };

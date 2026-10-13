@@ -1,9 +1,18 @@
 # Kagoj — Current State
 
-_Last updated: 2026-10-05_
+_Last updated: 2026-10-13_
 
 ## Status
 **V2 complete (2.4.0): P0-P4 done.**
+
+### 2.7.0 iPad mini 6 + landing page
+- iPad 2 support dropped. Removed the writing band (js/draw/band.js), wrist guard, Pencil-only toggle/prompt and the palette's palm options (prefs band, bandLines, wristGuard, pencilOnly, pencilAsked, paletteOpen, palettePos, toolbarsHidden are gone; Settings "Palm rejection" section removed).
+- Input (js/draw/input.js) is Pencil-only, always: the Apple Pencil (pointer events, coalesced points) and the mouse write; fingers never do. One finger scrolls once it moves 8 px (a resting palm does nothing), two fingers pinch-zoom, fingers landing while the Pencil is down are ignored, and the Pencil stops any finger pan. When the page fits the width, one-finger scrolling is vertical only.
+- Swipe: a quick sideways flick turns the page (left = next, right = previous); past the last page it adds a new page. The › button does the same.
+- GoodNotes-style tool strip under the top bar, always visible: pen, highlighter, eraser, lasso, select, hand | colours | sizes (eraser mode). Zoom % and page ‹ n/N › sit in the top bar. The floating palette is gone; "Add page after this one" moved to the ⋯ menu.
+- Build: modern JS allowed (ESLint ecmaVersion 2020, terser ecma 2017, no ES5 parse / block-function checks). Application Cache replaced by a service worker (scripts/sw.js → dist/sw.js: precaches shell + bundles + icons, cache-first for /assets /vendor /icons /fonts, network-first for /). Registered only in the built app.
+- /landing (landing.html, vercel rewrite): old-school paper look; features; "the desk" of draggable, widenable demo cards (Home greeting + next class, FIN245 course with editable marks, LAW200 attendance with live %, a piece of the LAW200 note with toggles and tickable takeaways, quick tasks with list picker, Work prompts/skills/links shelf with copy and add-your-own, a blank notebook with pen/highlighter/eraser, Pencil-only toggle and swipe pages). Desk layout and demo edits stay in that browser (localStorage). Login screen links to it.
+- Waitlist: table public.waitlist (email, note, created_at; unique lower(email); email format check). Anyone can insert (column grants email, note only); only the owner can select/delete (RLS on auth.uid()). Read sign-ups in the Supabase table editor or with SQL.
 
 ### 2.6.2
 - Coloured toggle headings (dropdowns) get a tinted, padded strip.

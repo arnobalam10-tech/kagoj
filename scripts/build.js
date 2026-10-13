@@ -1,4 +1,4 @@
-// Kagoj build: lint (ES5 rules) -> tests -> bundle -> minify (ES5 output) ->
+// Kagoj build: lint -> tests -> bundle -> minify ->
 // content-hash file names -> dist/
 // A build that fails lint or tests is not deployed (PRD §3.1).
 //
@@ -6,7 +6,7 @@
 //   core     loaded by a <script> tag at start (budget 120 KB)
 //   others   loaded on demand by Kagoj.app.need(NAME); their CSS (<link> tags
 //            inside the block) is injected when the bundle loads.
-// Every bundle is listed in the Application Cache manifest so the iPad 2
+// A service worker (dist/sw.js) precaches the shell and every bundle so the
 // home-screen app also works offline.
 /* eslint-disable */
 var fs = require('fs');
@@ -22,7 +22,7 @@ function log(m) { process.stdout.write(m + '\n'); }
 function fail(m) { process.stderr.write('BUILD FAILED: ' + m + '\n'); process.exit(1); }
 
 // 1. lint + tests
-log('> eslint (ES5)');
+log('> eslint');
 try {
   cp.execSync('npx eslint js spike/spike.js --max-warnings 0', { cwd: ROOT, stdio: 'inherit' });
 } catch (e) { fail('lint errors'); }
@@ -62,10 +62,9 @@ if (!bundles.length || bundles[0].name !== 'core') { fail('the first bundle must
 // 3. minify
 var terser = require('terser');
 var TERSER = {
-  ecma: 5, ie8: false, safari10: true,
-  compress: { ecma: 5, passes: 2, drop_debugger: true },
-  mangle: { safari10: true },
-  format: { ecma: 5, comments: false }
+  ecma: 2017,
+  compress: { ecma: 2017, passes: 2, drop_debugger: true },
+  format: { comments: false }
 };
 
 function source(b) {
@@ -87,23 +86,8 @@ Promise.all(bundles.map(function (b) { return terser.minify(source(b), TERSER); 
   outs.forEach(function (o, i) {
     var b = bundles[i];
     if (!o.code) { fail('terser produced no output for ' + b.name); }
-    var ast = null;
-    try { ast = espree.parse(o.code, { ecmaVersion: 5, sourceType: 'script' }); }
-    catch (e) { fail(b.name + ' bundle is not valid ES5: ' + e.message); }
-    // iOS 9 Safari (strict mode) rejects function declarations inside blocks
-    (function walk(node, parent) {
-      if (!node || typeof node.type !== 'string') { return; }
-      if (node.type === 'FunctionDeclaration' && parent && parent.type !== 'Program' &&
-          !(parent.type === 'BlockStatement' && parent.isFnBody)) {
-        fail(b.name + ' bundle has a function declaration inside a block (breaks iOS 9) near offset ' + node.start);
-      }
-      if ((node.type === 'FunctionDeclaration' || node.type === 'FunctionExpression') && node.body) { node.body.isFnBody = true; }
-      Object.keys(node).forEach(function (k) {
-        var v = node[k];
-        if (Array.isArray(v)) { v.forEach(function (c) { walk(c, node); }); }
-        else if (v && typeof v.type === 'string' && k !== 'parent') { walk(v, node); }
-      });
-    })(ast, null);
+    try { espree.parse(o.code, { ecmaVersion: 'latest', sourceType: 'script' }); }
+    catch (e) { fail(b.name + ' bundle does not parse: ' + e.message); }
     var limit = b.name === 'core' ? BUDGET.core : BUDGET.other;
     if (o.code.length > limit) { fail(b.name + ' bundle over budget: ' + o.code.length + ' > ' + limit); }
     b.code = o.code;
@@ -125,7 +109,6 @@ Promise.all(bundles.map(function (b) { return terser.minify(source(b), TERSER); 
       ? '<script>window.KAGOJ_BUNDLES = ' + JSON.stringify(map) + ';</script>\n<script src="/assets/' + b.file + '"></script>'
       : '');
   });
-  outHtml = outHtml.replace('<html lang="en">', '<html lang="en" manifest="/kagoj.appcache">');
   fs.writeFileSync(path.join(DIST, 'index.html'), outHtml);
 
   // vendored libraries loaded on demand (PC/phone features)
@@ -149,12 +132,16 @@ Promise.all(bundles.map(function (b) { return terser.minify(source(b), TERSER); 
     if (fs.existsSync(src)) { fs.cpSync(src, path.join(DIST, dir), { recursive: true }); }
   });
 
-  // Application Cache manifest: lets the iOS 9 home-screen app start offline.
+  // landing page (/landing) is a standalone file
+  fs.copyFileSync(path.join(ROOT, 'landing.html'), path.join(DIST, 'landing.html'));
+
+  // Service worker: precache the shell and bundles; network first for pages.
   var icons = fs.readdirSync(path.join(ROOT, 'icons')).map(function (f) { return '/icons/' + f; });
   var assets = ['/assets/' + cssName].concat(bundles.map(function (b) { return '/assets/' + b.file; }));
-  var manifest = ['CACHE MANIFEST', '# ' + hash(assets.join() + outHtml), '', 'CACHE:'].concat(assets, icons, ['', 'NETWORK:', '*', '']).join('\n');
-  fs.writeFileSync(path.join(DIST, 'kagoj.appcache'), manifest);
-
+  var sw = read('scripts/sw.js')
+    .replace('__VERSION__', hash(assets.join() + outHtml))
+    .replace('__PRECACHE__', JSON.stringify(['/'].concat(assets, icons)));
+  fs.writeFileSync(path.join(DIST, 'sw.js'), sw);
   bundles.forEach(function (b) {
     log('> ' + b.file + '  ' + (b.code.length / 1024).toFixed(1) + ' KB (budget ' + ((b.name === 'core' ? BUDGET.core : BUDGET.other) / 1024) + ' KB)');
   });

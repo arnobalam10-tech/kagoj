@@ -4,7 +4,7 @@ Source of truth: [prd.md](prd.md). This plan maps the PRD phases into concrete, 
 Progress is tracked in [STATE.md](STATE.md).
 
 ## Ground rules (from PRD §0, §3)
-- Frontend is hand-written **ES5** IIFE modules on `window.Kagoj`. No `let/const`, arrows, classes, template literals, `fetch`, Promises, Map/Set, etc.
+- Frontend is hand-written IIFE modules on `window.Kagoj` (house style: var/function). Since 2.7.0 the target is modern browsers (iPad mini 6 + Apple Pencil, desktop, phone); the old ES5 / iOS 9 constraints are retired.
 - No runtime dependencies. Dev-only: ESLint (ecmaVersion 5) + a Node build script.
 - Supabase via raw `XMLHttpRequest` to `/auth/v1` and `/rest/v1` only. No `supabase-js`.
 - CSS: no grid, no custom properties, no flex `gap`, `-webkit-` prefixes, no `100vh`.
@@ -196,3 +196,8 @@ publish to web) are dropped. Phone reminders come from a private calendar feed (
 - [x] **P4 Extras**: version history, page templates + template buttons + repeating templates, import
       (Markdown, CSV) / export (Markdown, HTML, CSV, print to PDF), math (KaTeX), Mermaid (rendered on
       PC/phone, saved for the iPad), keyboard shortcuts, small text / full width / lock page
+- [x] **2.7 iPad mini 6 + landing**: iPad 2 code removed (writing band, wrist guard, palette palm options,
+      AppCache, ES5 build checks); Pencil-only input always (fingers scroll / zoom / swipe); GoodNotes-style
+      tool strip always visible at the top; swipe left/right turns pages, past the last page adds one;
+      service worker for offline start; `/landing` with draggable demo cards and an email waitlist
+      (`public.waitlist`, insert-only for visitors, owner-only read)
