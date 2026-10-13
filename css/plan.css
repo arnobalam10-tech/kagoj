@@ -54,3 +54,5 @@
 .task-nodate { font-size: 13px; margin-top: 6px; color: #8A857B; }
 .dark .ht-row { border-color: #34322E; }
 .dark .ht-count { background: #243D30; color: #A7E3BC; }
+.hc-wl { cursor: pointer; border-left: 4px solid #D9A400; background: #FFFBEA; }
+.dark .hc-wl { background: #2E2A1C; }

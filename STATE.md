@@ -5,6 +5,13 @@ _Last updated: 2026-10-13_
 ## Status
 **V2 complete (2.4.0): P0-P4 done.**
 
+### 2.7.1 waitlist in the app
+- Block type `waitlist` (js/more/waitlist.js, slash "Waitlist sign-ups"): count, tabs Not emailed / Everyone, each sign-up with #number (🎁 for the first 50), mailto + copy, time, their note, "Emailed" tick (PATCH contacted). Copy emails copies the visible list. K.Waitlist caches the rows for 2 min.
+- waitlist.contacted boolean; owner-only update policy (column grant: contacted).
+- Home card "📬 Waitlist: N people waiting for a login" (first card) when anyone is not yet emailed; taps open the page with settings.waitlist. Other accounts read an empty list, so they never see it.
+- Owner data: page Work › 📬 Waitlist (settings.waitlist) with the block, a "how to give someone a login" toggle (Supabase Auth → Add user) and an email template.
+- Landing: dark by default on phones (toggle saved), entrance / scroll-reveal animations (off with reduced motion), tickable Today card, swipeable feature cards, jump chips, hero keeps page margins.
+
 ### 2.7.0 iPad mini 6 + landing page
 - iPad 2 support dropped. Removed the writing band (js/draw/band.js), wrist guard, Pencil-only toggle/prompt and the palette's palm options (prefs band, bandLines, wristGuard, pencilOnly, pencilAsked, paletteOpen, palettePos, toolbarsHidden are gone; Settings "Palm rejection" section removed).
 - Input (js/draw/input.js) is Pencil-only, always: the Apple Pencil (pointer events, coalesced points) and the mouse write; fingers never do. One finger scrolls once it moves 8 px (a resting palm does nothing), two fingers pinch-zoom, fingers landing while the Pencil is down are ignored, and the Pencil stops any finger pan. When the page fits the width, one-finger scrolling is vertical only.

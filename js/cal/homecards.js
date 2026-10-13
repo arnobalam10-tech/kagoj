@@ -260,8 +260,32 @@
     setTimeout(function () { st.forcing = false; }, 400);
   }
 
+  // ---------- waitlist (owner only: other accounts read an empty list) ----------
+
+  var wlHooked = false;
+  function waitlistCard() {
+    var WL = K.Waitlist;
+    if (!WL || !K.sb.isLoggedIn()) { return null; }
+    if (!wlHooked) { wlHooked = true; WL.on(function () { refresh(); }); }
+    WL.load(false);
+    var fresh = (WL.rows || []).filter(function (r) { return !r.contacted; });
+    if (!fresh.length) { return null; }
+    var page = null;
+    Docs.all().forEach(function (d) { if (!page && d.kind === 'page' && Docs.isLive(d) && d.settings && d.settings.waitlist) { page = d; } });
+    var last = fresh[0];
+    var box = D.el('div.hc-card.hc-wl', null, [
+      D.el('div.hc-kicker', { text: '📬 Waitlist' }),
+      D.el('div.hc-big', null, [D.el('b', { text: fresh.length + (fresh.length === 1 ? ' person' : ' people') }), ' waiting for a login from you']),
+      D.el('div.hc-small', { text: 'Latest: ' + last.email + (last.note ? ' · “' + (last.note.length > 80 ? last.note.substr(0, 80) + '…' : last.note) + '”' : '') })
+    ]);
+    D.tap(box, function () { if (page) { K.shell.openDoc(page); } else { sheets.toast('Add a "Waitlist sign-ups" block to any page (type /waitlist)'); } });
+    return box;
+  }
+
   K.HomeCards = {
     render: function (body) {
+      var wl = waitlistCard();
+      if (wl) { body.appendChild(wl); }
       body.appendChild(nextCard());
       var att = attendanceCard();
       if (att) { body.appendChild(att); }

@@ -42,3 +42,35 @@ kbd { font: 12.5px Menlo, Consolas, monospace; background: #F1EFEA; border: 1px 
 .math-out.raw { font: 14px Menlo, Consolas, monospace; color: #6E6A61; }
 .math-note { display: none; font-size: 12px; color: #B5B1A8; }
 .math-box.editing .math-note { display: block; }
+
+/* waitlist sign-ups block */
+.wl-block { border: 1px solid #E6E3DB; border-radius: 12px; padding: 14px 16px; margin: 6px 0; background: #fff; }
+.wl-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wl-head .spacer { flex: 1; }
+.wl-count { font-size: 15px; color: #5B6470; }
+.wl-num { font-family: Georgia, serif; font-size: 30px; color: #2B2B2B; margin-right: 2px; }
+.wl-tabs { display: flex; gap: 4px; border-bottom: 1px solid #E6E3DB; margin: 10px 0 4px; }
+.wl-tab { border: 0; background: none; padding: 6px 10px; font-size: 14px; color: #8A857B; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
+.wl-tab.on { color: #2B2B2B; border-bottom-color: #2B2B2B; font-weight: 700; }
+.wl-row { padding: 10px 0; border-bottom: 1px dashed #E6E3DB; }
+.wl-row:last-of-type { border-bottom: 0; }
+.wl-row.done { opacity: .55; }
+.wl-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wl-n { font-size: 12px; color: #9B968C; min-width: 34px; }
+.wl-email { font-weight: 700; color: #2F5DA8; text-decoration: none; word-break: break-all; }
+.wl-email:hover { text-decoration: underline; }
+.wl-copy { height: 28px; min-width: 28px; padding: 0 4px; }
+.wl-copy .icon { width: 16px; height: 16px; }
+.wl-when { font-size: 12.5px; color: #9B968C; margin-left: auto; }
+.wl-sent { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: #5B6470; cursor: pointer; }
+.wl-note { margin: 6px 0 0 42px; padding: 6px 10px; background: #FBF7EA; border-radius: 8px; font-size: 14.5px; color: #3D3A34; white-space: pre-wrap; }
+.wl-note.none { background: none; padding: 0 10px; color: #B5B1A8; font-style: italic; font-size: 13px; }
+.wl-foot { font-size: 12.5px; color: #9B968C; margin: 10px 0 0; }
+.phone .wl-note { margin-left: 0; }
+.phone .wl-when { margin-left: 0; width: 100%; order: 5; }
+.dark .wl-block { background: #232323; border-color: #3A3833; }
+.dark .wl-num { color: #E8E6E1; }
+.dark .wl-tabs, .dark .wl-row { border-color: #3A3833; }
+.dark .wl-tab.on { color: #E8E6E1; border-bottom-color: #E8E6E1; }
+.dark .wl-email { color: #8DB0F0; }
+.dark .wl-note { background: #2E2B22; color: #D8D4CB; }

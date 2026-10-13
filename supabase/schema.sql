@@ -211,3 +211,8 @@ grant select, delete on public.waitlist to authenticated;
 create policy waitlist_insert on public.waitlist for insert to anon, authenticated with check (true);
 create policy waitlist_owner_read on public.waitlist for select to authenticated using (auth.uid() = '336b0662-2fdf-4503-9fdf-75244b9f742a'::uuid);
 create policy waitlist_owner_delete on public.waitlist for delete to authenticated using (auth.uid() = '336b0662-2fdf-4503-9fdf-75244b9f742a'::uuid);
+alter table public.waitlist add column if not exists contacted boolean not null default false;
+grant update (contacted) on public.waitlist to authenticated;
+create policy waitlist_owner_update on public.waitlist for update to authenticated
+  using (auth.uid() = '336b0662-2fdf-4503-9fdf-75244b9f742a'::uuid)
+  with check (auth.uid() = '336b0662-2fdf-4503-9fdf-75244b9f742a'::uuid);
